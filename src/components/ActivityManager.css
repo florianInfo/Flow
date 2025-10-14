@@ -1,0 +1,329 @@
+.activity-manager {
+  background: white;
+  border-radius: var(--border-radius-large);
+  box-shadow: var(--shadow-light);
+  overflow: hidden;
+  border: 1px solid rgba(139, 168, 136, 0.2);
+}
+
+.manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, var(--sage-green) 0%, var(--moss-green) 100%);
+  color: white;
+}
+
+.manager-header h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.activity-count {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.activity-form {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(139, 168, 136, 0.2);
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.activity-input {
+  width: 100%;
+  padding: 0.8rem;
+  border: 2px solid rgba(139, 168, 136, 0.3);
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+  transition: all var(--transition-fast);
+  background: var(--light-wood);
+}
+
+.activity-input:focus {
+  outline: none;
+  border-color: var(--sage-green);
+  box-shadow: 0 0 0 3px rgba(139, 168, 136, 0.1);
+}
+
+.category-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.category-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  border: 2px solid transparent;
+  border-radius: var(--border-radius);
+  background: var(--light-wood);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.category-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-light);
+}
+
+.category-btn.selected {
+  border-color: var(--sage-green);
+  background: rgba(139, 168, 136, 0.1);
+}
+
+.category-icon {
+  font-size: 1.2rem;
+}
+
+.category-name {
+  flex: 1;
+  text-align: left;
+}
+
+.color-picker-container {
+  position: relative;
+}
+
+.color-picker-btn {
+  width: 100%;
+  padding: 0.8rem;
+  border: 2px solid rgba(139, 168, 136, 0.3);
+  border-radius: var(--border-radius);
+  background: var(--light-wood);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-weight: 500;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.color-picker-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-light);
+}
+
+.color-picker-popup {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-heavy);
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.close-picker {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: var(--text-light);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.create-btn, .save-btn {
+  flex: 1;
+  padding: 0.8rem 1.5rem;
+  background: linear-gradient(135deg, var(--sage-green) 0%, var(--moss-green) 100%);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.create-btn:hover, .save-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+.cancel-btn {
+  flex: 1;
+  padding: 0.8rem 1.5rem;
+  background: var(--text-light);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.cancel-btn:hover {
+  background: var(--text-medium);
+  transform: translateY(-1px);
+}
+
+.activities-list {
+  padding: 1.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.activities-list h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 1rem;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(139, 168, 136, 0.2);
+  border-radius: var(--border-radius);
+  margin-bottom: 0.8rem;
+  background: var(--light-wood);
+  transition: all var(--transition-fast);
+}
+
+.activity-item:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-light);
+}
+
+.activity-preview {
+  flex: 1;
+  padding: 0.5rem 0.8rem;
+  border-radius: var(--border-radius);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.activity-preview-title {
+  word-break: break-word;
+}
+
+.activity-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-btn, .delete-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all var(--transition-fast);
+}
+
+.edit-btn {
+  background: var(--golden-ochre);
+  color: white;
+}
+
+.edit-btn:hover {
+  background: var(--terracotta);
+  transform: scale(1.1);
+}
+
+.delete-btn {
+  background: var(--terracotta);
+  color: white;
+}
+
+.delete-btn:hover {
+  background: #B85450;
+  transform: scale(1.1);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-medium);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state small {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .category-selector {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .activity-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.8rem;
+  }
+  
+  .activity-actions {
+    justify-content: center;
+  }
+}
+
+/* Styles pour l'impression */
+@media print {
+  .activity-manager {
+    display: none;
+  }
+}
