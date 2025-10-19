@@ -16,10 +16,9 @@ const TimeSlot = ({ day, time, children }) => {
     <div
       ref={setNodeRef}
       className={`
-        time-slot h-[20px] relative
+         h-[20px] relative
         ${isOver ? 'bg-sage/20' : ''}
-        transition-colors duration-200
-        ${time.endsWith(':00') ? 'border-b border-wood-300' : 'border-b border-dotted border-wood-200'}
+        ${time.endsWith(':00') ? 'border-t border-black' : 'border-t border-dotted border-black'}
       `}
     >
       {children}
@@ -174,7 +173,7 @@ const PlannerGrid = () => {
   };
 
   return (
-    <div className="bg-red-500/50 z-10">
+    <div className="bg-wood-100 z-10">
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         {/* Header fixe avec les jours */}
         <div className="flex w-full bg-wood-400 border-b border-wood-200 sticky top-0 z-20 flex-1">
@@ -184,8 +183,8 @@ const PlannerGrid = () => {
           </div>
           
           {/* En-têtes des jours */}
-          {DAYS.map((day) => (
-            <div key={day} className="border-r border-wood-200 flex-1 min-w-[120px] flex items-center justify-center">
+          {DAYS.map((day, dayIndex) => (
+            <div key={day} className="flex-1 min-w-[120px] flex items-center justify-center border-r border-dotted border-wood-200">
               <span className="text-wood-800 font-semibold text-sm">{day}</span>
             </div>
           ))}
@@ -198,16 +197,16 @@ const PlannerGrid = () => {
             <div className="bg-wood-100 border-r border-wood-200 w-16 min-w-[60px] sticky left-0 z-10">
               {TIME_SLOTS.map((time) => (
                 <div key={time} className={`h-[20px] flex items-center justify-center text-xs text-wood-600 ${
-                  time.endsWith(':00') ? 'border-b border-wood-300' : 'border-b border-dotted border-wood-200'
+                  time.endsWith(':00') ? 'border-t border-wood-300' : 'border-t border-dotted border-wood-200'
                 }`}>
-                  {time}
+                  {time.endsWith(':00') && time}
                 </div>
               ))}
             </div>
 
             {/* Colonnes des jours (scrollables) */}
             {DAYS.map((day, dayIndex) => (
-              <div key={day} className="border-r border-wood-200 flex-1 min-w-[120px]">
+              <div key={day} className="flex-1 min-w-[120px] border-r border-dotted border-wood-200">
                 {TIME_SLOTS.map((time) => (
                   <TimeSlot key={`${day}-${time}`} day={dayIndex} time={time}>
                     <div className="p-1 space-y-1">

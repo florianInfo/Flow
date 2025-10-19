@@ -70,13 +70,6 @@ body {
   animation: notification-slide 3s ease-in-out forwards;
 }
 
-/* Styles pour les créneaux de temps */
-.time-slot {
-  height: 30px;
-  border-bottom: 1px solid #e5e7eb;
-  position: relative;
-}
-
 /* Styles pour le planner responsive */
 .planner-grid {
   display: grid;
@@ -89,10 +82,6 @@ body {
   .planner-grid {
     grid-template-columns: 50px repeat(7, 1fr);
     min-width: 800px;
-  }
-  
-  .time-slot {
-    height: 25px;
   }
 }
 
