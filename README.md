@@ -1,60 +1,52 @@
-# 🌿 Zen Weekly Planner
+# Flow Planner 🌿
 
-Une application de planification hebdomadaire avec une charte graphique zen inspirée de la nature et des tons bois/forêt.
+Une application de planning immersive et ludique avec drag & drop, conçue pour planifier votre semaine de manière zen et efficace.
 
 ## ✨ Fonctionnalités
 
-### 🎯 Gestion des Activités
-- **Création d'activités** avec titre personnalisé
-- **Palette de couleurs** prédéfinie (5 catégories zen)
-- **Couleurs personnalisées** avec sélecteur de couleur
-- **Catégories thématiques** : Nature, Concentration, Énergie, Passion, Méditation
+### 🎯 Planning Immersif
+- **Interface immersive** : Prend tout l'écran pour une expérience de jeu
+- **Design zen** : Charte graphique bois/forêt avec palette de couleurs naturelles
+- **Animations fluides** : Transitions et animations ludiques avec Framer Motion
 
-### 📅 Planning Interactif
-- **Drag & Drop** fluide des activités
-- **Redimensionnement** des créneaux (minimum 15 minutes)
-- **Planning hebdomadaire** du lundi au dimanche
-- **Créneaux horaires** de 6h à 22h
-- **Interface intuitive** avec feedback visuel
+### 🎨 Création d'Activités
+- **Création intuitive** : Bouton "Nouvelle activité" avec popup de création
+- **Palette de couleurs** : 5 couleurs thématiques (Sauge, Mousse, Or, Cuivre, Sarcelle)
+- **Catégorisation** : Général, Travail, Sport, Loisirs, Personnel
+- **Templates** : Activités disponibles en haut pour drag & drop
 
-### 📊 Statistiques Temps Réel
-- **Classement F1** des activités par temps passé
-- **Notifications animées** pour les changements
-- **Statistiques détaillées** : temps total, sessions, classement
-- **Mise à jour en temps réel** des données
+### 🖱️ Drag & Drop Avancé
+- **Glisser-déposer** : Déplacez les activités depuis les templates vers les créneaux
+- **Détection de conflits** : Empêche la superposition d'activités
+- **Feedback visuel** : Animations et notifications en temps réel
 
-### 🎨 Charte Graphique Zen
-- **Palette de couleurs** bois/forêt :
-  - 🌿 Vert sauge (#8BA888) - Nature / Calme
-  - 🌲 Vert mousse (#7B8654) - Concentration
-  - ☀️ Ocre doré (#DCA44C) - Énergie / Sport
-  - 🔥 Terre cuivrée (#C1683C) - Passion / Créativité
-  - 💧 Bleu sarcelle (#4B7B73) - Méditation / Détente
+### ⏰ Gestion du Temps
+- **Redimensionnement** : Ajustez la durée des activités (15min min, 24h max)
+- **Créneaux flexibles** : Système de créneaux de 15 minutes
+- **Indicateurs visuels** : Affichage de la durée au survol
 
-### 🖨️ Version Imprimable
-- **Planning optimisé** pour l'impression
-- **Statistiques de la semaine** incluses
-- **Légende des couleurs** intégrée
-- **Format A4** avec mise en page professionnelle
+### 📊 Statistiques en Temps Réel
+- **Classement F1** : Top 5 des activités par temps passé
+- **Mise à jour live** : Changements de position avec animations
+- **Métriques détaillées** : Temps total, moyenne, nombre de sessions
+- **Notifications** : Alertes "+30min" lors des changements
 
 ### 💾 Sauvegarde Locale
-- **Sauvegarde automatique** dans localStorage
-- **Système de sauvegarde** avec copies de sécurité
-- **Chargement automatique** au démarrage
-- **Export/Import** des données JSON
+- **Persistance** : Données sauvegardées automatiquement dans le navigateur
+- **Format JSON** : Structure de données claire et extensible
+- **Chargement automatique** : Restauration des données au démarrage
 
-### 🎭 Animations Ludiques
-- **Arrière-plan animé** avec particules flottantes
-- **Transitions fluides** entre les états
-- **Animations de drag & drop** expressives
-- **Effets de respiration** pour l'ambiance zen
-- **Notifications animées** avec auto-suppression
+### 🖨️ Impression
+- **Version imprimable** : Optimisée pour l'impression
+- **Mise en page adaptée** : Styles spéciaux pour l'impression
+- **Bouton d'impression** : Accès direct depuis l'interface
 
 ## 🚀 Installation
 
 ```bash
 # Cloner le projet
-git clone https://github.com/votre-username/zen-weekly-planner.git
+git clone <repository-url>
+cd flow-planner
 
 # Installer les dépendances
 npm install
@@ -63,152 +55,71 @@ npm install
 npm start
 ```
 
-## 🛠️ Technologies Utilisées
+## 🎨 Palette de Couleurs
 
-- **React 18** - Framework principal
-- **Framer Motion** - Animations fluides
-- **React Beautiful DnD** - Drag & Drop
-- **React Color** - Sélecteur de couleurs
-- **Date-fns** - Gestion des dates
-- **CSS Variables** - Thème cohérent
+| Couleur | Hex | Usage |
+|---------|-----|-------|
+| 🌿 Sauge | `#8BA888` | Nature / Calme / Repos |
+| 🌲 Mousse | `#7B8654` | Concentration / Travail |
+| ☀️ Or | `#DCA44C` | Énergie / Sport / Motivation |
+| 🔥 Cuivre | `#C1683C` | Passion / Créativité |
+| 💧 Sarcelle | `#4B7B73` | Méditation / Détente / Soirée |
 
-## 📱 Responsive Design
+## 🏗️ Architecture
 
-L'application s'adapte parfaitement à tous les écrans :
-- **Desktop** : Interface complète avec panneau latéral
-- **Tablet** : Layout adaptatif avec navigation optimisée
-- **Mobile** : Interface tactile avec contrôles simplifiés
+### Modèles de Données
+- **Planner** : Conteneur principal avec activités, créneaux et programmations
+- **Activity** : Modèle d'activité avec titre, couleur et catégorie
+- **Creneaux** : Créneau horaire avec jour, heure de début et fin
+- **ScheduledActivity** : Liaison entre activité et créneau
 
-## 🎨 Personnalisation
+### Composants Principaux
+- **Header** : Logo, titre et actions (impression, paramètres)
+- **ActivityCreator** : Création et gestion des activités
+- **PlannerGrid** : Grille principale avec drag & drop
+- **StatisticsPanel** : Classement et statistiques en temps réel
+- **NotificationSystem** : Système de notifications
 
-### Couleurs d'Activités
-```css
-/* Variables CSS personnalisables */
-:root {
-  --sage-green: #8BA888;
-  --moss-green: #7B8654;
-  --golden-ochre: #DCA44C;
-  --terracotta: #C1683C;
-  --teal: #4B7B73;
-}
-```
+### Technologies
+- **React 18** : Framework principal
+- **Tailwind CSS** : Styling et design system
+- **Framer Motion** : Animations et transitions
+- **@dnd-kit** : Système de drag & drop
+- **Lucide React** : Icônes modernes
 
-### Animations
-- **Durée configurable** des transitions
-- **Easing personnalisé** pour les animations
-- **Support des préférences** de mouvement réduit
+## 📱 Utilisation
 
-## 📊 Structure des Données
+1. **Créer une activité** : Cliquez sur "Nouvelle activité" et remplissez le formulaire
+2. **Programmer** : Glissez l'activité depuis le haut vers un créneau horaire
+3. **Ajuster la durée** : Survolez l'activité et redimensionnez avec les poignées
+4. **Suivre les stats** : Consultez le classement en bas de page
+5. **Imprimer** : Utilisez le bouton d'impression pour sauvegarder votre planning
 
-```json
-{
-  "activities": [
-    {
-      "id": "unique-id",
-      "title": "Nom de l'activité",
-      "color": "#8BA888",
-      "category": "nature",
-      "duration": 60,
-      "createdAt": "2024-01-01T00:00:00.000Z"
-    }
-  ],
-  "schedule": {
-    "monday": {
-      "6:00": { "id": "activity-id", "duration": 60 }
-    }
-  },
-  "statistics": {
-    "activity-id": {
-      "totalMinutes": 120,
-      "sessions": 2,
-      "lastActivity": "2024-01-01T00:00:00.000Z"
-    }
-  }
-}
-```
+## 🎮 Expérience Utilisateur
 
-## 🎯 Utilisation
-
-### Créer une Activité
-1. Cliquez sur "Gestion des Activités"
-2. Saisissez le titre de l'activité
-3. Choisissez une catégorie ou une couleur personnalisée
-4. Cliquez sur "Créer l'activité"
-
-### Planifier une Semaine
-1. Glissez-déposez les activités sur le planning
-2. Redimensionnez les créneaux selon vos besoins
-3. Consultez les statistiques en temps réel
-4. Imprimez votre planning avec le bouton dédié
-
-### Consulter les Statistiques
-- **Classement F1** : Activités classées par temps passé
-- **Notifications** : Changements de position et ajouts de temps
-- **Résumé global** : Temps total, sessions, activités
+L'application est conçue comme un jeu avec :
+- **Animations fluides** : Transitions douces et naturelles
+- **Feedback visuel** : Réactions immédiates aux actions
+- **Interface immersive** : Plein écran pour une concentration maximale
+- **Design zen** : Couleurs apaisantes et typographie claire
 
 ## 🔧 Développement
 
-### Structure du Projet
-```
-src/
-├── components/          # Composants React
-│   ├── WeeklyPlanner.js    # Planning principal
-│   ├── ActivityManager.js  # Gestion des activités
-│   ├── StatisticsPanel.js # Panneau statistiques
-│   └── ...
-├── utils/              # Utilitaires
-│   └── storage.js         # Gestion localStorage
-└── App.js             # Composant principal
-```
-
-### Scripts Disponibles
 ```bash
-npm start      # Démarrage en développement
-npm build      # Build de production
-npm test       # Tests unitaires
-npm eject      # Éjection de Create React App
+# Mode développement
+npm start
+
+# Build de production
+npm run build
+
+# Tests
+npm test
 ```
-
-## 🌟 Fonctionnalités Avancées
-
-### Notifications Intelligentes
-- **Détection automatique** des changements
-- **Animations contextuelles** selon le type
-- **Auto-suppression** avec barre de progression
-- **Historique** des notifications
-
-### Système de Sauvegarde
-- **Sauvegarde automatique** à chaque modification
-- **Copies de sécurité** quotidiennes
-- **Nettoyage automatique** des anciennes sauvegardes
-- **Récupération** en cas d'erreur
-
-### Optimisations Performance
-- **Lazy loading** des composants
-- **Memoization** des calculs coûteux
-- **Debouncing** des sauvegardes
-- **Virtualization** pour les grandes listes
 
 ## 📄 Licence
 
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à :
-1. Fork le projet
-2. Créer une branche feature
-3. Commiter vos changements
-4. Pousser vers la branche
-5. Ouvrir une Pull Request
-
-## 📞 Support
-
-Pour toute question ou suggestion :
-- **Issues** : Utilisez le système d'issues GitHub
-- **Discussions** : Rejoignez les discussions communautaires
-- **Email** : contact@zen-planner.com
+MIT License - Libre d'utilisation et de modification.
 
 ---
 
-*Créé avec ❤️ et une approche zen pour une planification sereine de votre semaine.*
+*Flow Planner* - Planifiez votre semaine en toute sérénité 🌿
