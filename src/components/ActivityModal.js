@@ -3,28 +3,57 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Activity, COLOR_PALETTE, Planner } from '../models/DataModels';
 
-const ActivityModal = ({ isOpen, onClose, onActivityCreated }) => {
+const ActivityModal = ({ isOpen, onClose, onActivityCreated, editingActivity = null }) => {
   const [newActivity, setNewActivity] = useState({
     title: '',
     description: '',
     color: 'sage'
   });
 
+  // Initialiser les données quand on édite une activité
+  React.useEffect(() => {
+    if (editingActivity) {
+      setNewActivity({
+        title: editingActivity.title || '',
+        description: editingActivity.description || '',
+        color: editingActivity.color || 'sage'
+      });
+    } else {
+      setNewActivity({
+        title: '',
+        description: '',
+        color: 'sage'
+      });
+    }
+  }, [editingActivity]);
+
   const handleCreateActivity = () => {
     if (!newActivity.title.trim()) return;
 
-    const activity = new Activity(
-      Date.now().toString(),
-      newActivity.title.trim(),
-      newActivity.color
-    );
-    
-    // Ajouter la description si elle existe
-    if (newActivity.description.trim()) {
-      activity.description = newActivity.description.trim();
+    if (editingActivity) {
+      // Mode édition : mettre à jour l'activité existante
+      const updatedActivity = {
+        ...editingActivity,
+        title: newActivity.title.trim(),
+        description: newActivity.description.trim(),
+        color: newActivity.color
+      };
+      onActivityCreated(updatedActivity);
+    } else {
+      // Mode création : créer une nouvelle activité
+      const activity = new Activity(
+        Date.now().toString(),
+        newActivity.title.trim(),
+        newActivity.color
+      );
+      
+      // Ajouter la description si elle existe
+      if (newActivity.description.trim()) {
+        activity.description = newActivity.description.trim();
+      }
+      onActivityCreated(activity);
     }
-
-    onActivityCreated(activity);
+    
     setNewActivity({ title: '', description: '', color: 'sage' });
     onClose();
   };
@@ -61,8 +90,12 @@ const ActivityModal = ({ isOpen, onClose, onActivityCreated }) => {
           >
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-2xl font-bold text-white">Nouvelle activité</h3>
-                <p className="text-white/80 text-sm mt-1">Créez une nouvelle activité pour votre planning</p>
+                <h3 className="text-2xl font-bold text-white">
+                  {editingActivity ? 'Modifier l\'activité' : 'Nouvelle activité'}
+                </h3>
+                <p className="text-white/80 text-sm mt-1">
+                  {editingActivity ? 'Modifiez les informations de votre activité' : 'Créez une nouvelle activité pour votre planning'}
+                </p>
               </div>
               <motion.button
                 whileHover={{ scale: 1.1, rotate: 90 }}
@@ -134,15 +167,15 @@ const ActivityModal = ({ isOpen, onClose, onActivityCreated }) => {
                 >
                   Annuler
                 </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleCreateActivity}
-                  disabled={!newActivity.title.trim()}
-                  className="flex-1 px-6 py-3 bg-white/20 border-2 border-white/30 text-white rounded-xl hover:bg-white/30 hover:border-white/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium select-none"
-                >
-                  Créer l'activité
-                </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleCreateActivity}
+                    disabled={!newActivity.title.trim()}
+                    className="flex-1 px-6 py-3 bg-white/20 border-2 border-white/30 text-white rounded-xl hover:bg-white/30 hover:border-white/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium select-none"
+                  >
+                    {editingActivity ? 'Modifier l\'activité' : 'Créer l\'activité'}
+                  </motion.button>
               </div>
             </div>
           </motion.div>

@@ -15,6 +15,7 @@ function App() {
   const [planner, setPlanner] = useLocalStorage('flow-planner', new Planner());
   const [notifications, setNotifications] = useState([]);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [editingActivity, setEditingActivity] = useState(null);
 
   // Sauvegarder automatiquement les changements
   useEffect(() => {
@@ -40,17 +41,37 @@ function App() {
     setPlanner(prev => {
       const newPlanner = new Planner();
       Object.assign(newPlanner, prev);
-      newPlanner.addActivity(activity);
+      
+      if (editingActivity) {
+        // Mode édition : mettre à jour l'activité existante
+        const activityIndex = newPlanner.activities.findIndex(a => a.id === activity.id);
+        if (activityIndex !== -1) {
+          newPlanner.activities[activityIndex] = activity;
+        }
+        addNotification(`Activité "${activity.title}" modifiée !`, 'positive');
+      } else {
+        // Mode création : ajouter une nouvelle activité
+        newPlanner.addActivity(activity);
+        addNotification(`Activité "${activity.title}" créée !`, 'positive');
+      }
+      
       return newPlanner;
     });
-    addNotification(`Activité "${activity.title}" créée !`, 'positive');
   };
 
   const contextValue = {
     planner,
     setPlanner,
     addNotification,
-    openActivityModal: () => setIsActivityModalOpen(true)
+    openActivityModal: () => {
+      setEditingActivity(null);
+      setIsActivityModalOpen(true);
+    },
+    editActivity: (activity) => {
+      console.log('editActivity called with:', activity);
+      setEditingActivity(activity);
+      setIsActivityModalOpen(true);
+    }
   };
 
   return (
@@ -86,8 +107,12 @@ function App() {
         {/* Modal de création d'activité */}
         <ActivityModal 
           isOpen={isActivityModalOpen}
-          onClose={() => setIsActivityModalOpen(false)}
+          onClose={() => {
+            setIsActivityModalOpen(false);
+            setEditingActivity(null);
+          }}
           onActivityCreated={handleActivityCreated}
+          editingActivity={editingActivity}
         />
         
         {/* Vue d'impression */}

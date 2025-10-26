@@ -5,7 +5,7 @@ import { usePlanner } from '../context/PlannerContext';
 import ActivityBlock from './ActivityBlock';
 
 const ActivityCreator = () => {
-  const { planner, openActivityModal } = usePlanner();
+  const { planner, openActivityModal, editActivity } = usePlanner();
 
   return (
     <div className="bg-white/80 backdrop-blur-sm border-b border-wood-200 relative z-50">
@@ -26,6 +26,7 @@ const ActivityCreator = () => {
                     activity={activity}
                     isTemplate={true}
                     className="cursor-move relative z-40 select-none"
+                    onEdit={editActivity}
                   />
                 </motion.div>
               ))}

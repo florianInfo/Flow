@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Edit } from 'lucide-react';
 import { COLOR_PALETTE } from '../models/DataModels';
 
-const ActivityBlock = ({ activity, isTemplate = false, className = '', style = {} }) => {
+const ActivityBlock = ({ activity, isTemplate = false, className = '', style = {}, onEdit }) => {
   const colorInfo = COLOR_PALETTE[activity.color] || COLOR_PALETTE.sage;
   
   return (
@@ -23,12 +24,20 @@ const ActivityBlock = ({ activity, isTemplate = false, className = '', style = {
       <div className="flex flex-col justify-center space-y-1">
         <div className="flex items-center justify-center space-x-2">
           <span className="truncate font-medium">{activity.title}</span>
-          {isTemplate && (
-            <motion.div
-              animate={{ rotate: [0, 10, -10, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="w-2 h-2 bg-white/60 rounded-full"
-            />
+          {isTemplate && onEdit && (
+            <motion.button
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('Edit button clicked for activity:', activity.title);
+                onEdit(activity);
+              }}
+              className="p-1 hover:bg-white/20 rounded-full transition-colors select-none cursor-pointer relative z-10"
+              title="Modifier l'activité"
+            >
+              <Edit className="w-3 h-3 text-white/80" />
+            </motion.button>
           )}
         </div>
         {activity.description && (
@@ -39,7 +48,7 @@ const ActivityBlock = ({ activity, isTemplate = false, className = '', style = {
       </div>
       
       {/* Effet de brillance */}
-      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
     </motion.div>
   );
 };
