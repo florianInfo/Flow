@@ -1,0 +1,218 @@
+/* Styles pour créer un effet de tableau en bois réaliste style jeu vidéo */
+
+/* Variables CSS pour les couleurs bois */
+:root {
+  --wood-light: #F5DEB3;  /* Bois plus clair comme lattes de lit */
+  --wood-medium: #D2B48C;
+  --wood-dark: #8B7355;
+  --wood-accent: #CD853F;
+  --wood-grain-light: #F4E4BC;
+  --wood-grain-dark: #8B7355;
+  --wood-shadow: rgba(0, 0, 0, 0.2);
+  --wood-highlight: rgba(255, 255, 255, 0.15);
+  --burn-text: #2C1810;  /* Couleur pour l'effet fer chaud */
+  --burn-glow: #8B4513;   /* Lueur du fer chaud */
+}
+
+/* Classe principale pour le tableau en bois */
+.wooden-board {
+  background: 
+    /* Grain de bois plus doux */
+    
+    /* Base bois plus claire */
+    linear-gradient(135deg, var(--wood-light) 0%, var(--wood-medium) 100%);
+  
+  /* Effet de relief plus doux */
+  box-shadow: 
+    inset 0 0 15px rgba(0, 0, 0, 0.1),
+    inset 0 0 30px rgba(0, 0, 0, 0.05),
+    0 6px 24px rgba(0, 0, 0, 0.2),
+    0 3px 12px rgba(0, 0, 0, 0.1);
+  
+  /* Bordure bois plus claire */
+  border: 6px solid var(--wood-medium);
+  
+  position: relative;
+  overflow: hidden;
+}
+
+/* Effet de grain de bois plus fin */
+.wooden-board::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Effet de brillance sur le bois */
+.wooden-board::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 30%,
+    transparent 70%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+  pointer-events: none;
+}
+
+/* Classe pour les éléments du tableau (comme les créneaux) */
+.wooden-slot {
+  background: 
+    linear-gradient(135deg, var(--wood-light) 0%, var(--wood-grain-light) 100%);
+  border: 1px solid var(--wood-medium);
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.wooden-slot::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+/* Classe pour les bordures de tableau */
+.wooden-border {
+  background: var(--wood-medium);
+  box-shadow: 
+    inset 0 0 10px rgba(0, 0, 0, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 2px solid var(--wood-accent);
+  position: relative;
+}
+
+/* Supprimer les patterns sur les bordures */
+.wooden-border::before,
+.wooden-border::after {
+  display: none;
+}
+
+/* Classe pour les éléments en relief */
+.wooden-raised {
+  background: 
+    linear-gradient(135deg, var(--wood-light) 0%, var(--wood-medium) 100%);
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--wood-dark);
+}
+
+/* Classe pour les éléments enfoncés */
+.wooden-inset {
+  background: 
+    linear-gradient(135deg, var(--wood-dark) 0%, var(--wood-medium) 100%);
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 2px rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--wood-accent);
+}
+
+/* Animation pour les éléments interactifs */
+.wooden-interactive {
+  transition: all 0.2s ease;
+}
+
+.wooden-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: 
+    0 6px 12px rgba(0, 0, 0, 0.4),
+    0 3px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.wooden-interactive:active {
+  transform: translateY(0px);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Style pour les textes sur bois */
+.wooden-text {
+  color: var(--wood-dark);
+  text-shadow: 
+    1px 1px 2px rgba(255, 255, 255, 0.3),
+    -1px -1px 2px rgba(0, 0, 0, 0.3);
+  font-weight: bold;
+}
+
+.wooden-text-light {
+  color: var(--wood-grain-light);
+  text-shadow: 
+    1px 1px 2px rgba(0, 0, 0, 0.5),
+    -1px -1px 2px rgba(255, 255, 255, 0.2);
+}
+
+/* Effet fer chaud pour les inscriptions */
+.burned-text {
+  color: var(--burn-text);
+  text-shadow: 
+    0 0 4px var(--burn-glow),
+    0 0 8px var(--burn-glow),
+    0 0 12px var(--burn-glow),
+    1px 1px 2px rgba(0, 0, 0, 0.8),
+    -1px -1px 2px rgba(255, 255, 255, 0.1);
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+/* Effet fer chaud pour les titres */
+.burned-title {
+  color: var(--burn-text);
+  text-shadow: 
+    0 0 6px var(--burn-glow),
+    0 0 12px var(--burn-glow),
+    0 0 18px var(--burn-glow),
+    2px 2px 4px rgba(0, 0, 0, 0.9),
+    -2px -2px 4px rgba(255, 255, 255, 0.2);
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Effet de clous/vis sur le tableau */
+.wooden-board .wooden-nail {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: radial-gradient(circle, #C0C0C0 0%, #808080 70%, #404040 100%);
+  border-radius: 50%;
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Responsive design pour le bois */
+@media (max-width: 768px) {
+  .wooden-board {
+    border-width: 4px;
+  }
+  
+  .wooden-board::before {
+    background-size: 6px 6px;
+  }
+}

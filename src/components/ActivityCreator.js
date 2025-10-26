@@ -8,7 +8,7 @@ const ActivityCreator = () => {
   const { planner, openActivityModal, editActivity, deleteActivity } = usePlanner();
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm border-b border-wood-200 relative z-50">
+    <div className="wooden-raised border-b border-amber-800 relative z-50">
       <div className="p-2 h-24 overflow-y-auto">
         <div className="flex items-center justify-between">
           {/* Activités existantes */}
@@ -39,7 +39,7 @@ const ActivityCreator = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={openActivityModal}
-            className="ml-4 flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-sage to-moss text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 relative z-50 select-none cursor-pointer"
+            className="ml-4 flex items-center space-x-2 px-4 py-2 wooden-interactive rounded-lg shadow-md hover:shadow-lg transition-all duration-200 relative z-50 select-none cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span className="font-medium">Nouvelle activité</span>

@@ -10,6 +10,7 @@ import StatisticsPanel from './components/StatisticsPanel';
 import NotificationSystem from './components/NotificationSystem';
 import PrintView from './components/PrintView';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import './styles/wooden-board.css';
 
 function App() {
   const [planner, setPlanner] = useLocalStorage('flow-planner', new Planner());
@@ -96,13 +97,30 @@ function App() {
 
   return (
     <PlannerProvider value={contextValue}>
-      <div className="min-h-screen bg-gradient-to-br from-wood-50 to-wood-100 cursor-default select-none">
+      <div className="min-h-screen cursor-default select-none">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8 }}
-          className="flex flex-col h-screen"
+          className="flex flex-col h-screen wooden-board rounded-2xl overflow-hidden relative"
         >
+          {/* Titre Flow inscrit au fer chaud */}
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30">
+            <h1 className="burned-title text-3xl">Flow</h1>
+          </div>
+          
+          {/* Classement inscrit au fer chaud */}
+          <div className="absolute top-4 right-8 z-30">
+            <div className="burned-text text-sm">Classement</div>
+            <div className="burned-text text-xs mt-1">#1 Productif</div>
+          </div>
+          
+          {/* Clous décoratifs */}
+          <div className="wooden-nail" style={{ top: '20px', left: '20px' }}></div>
+          <div className="wooden-nail" style={{ top: '20px', right: '20px' }}></div>
+          <div className="wooden-nail" style={{ bottom: '20px', left: '20px' }}></div>
+          <div className="wooden-nail" style={{ bottom: '20px', right: '20px' }}></div>
+          
           {/* Header avec logo et menu */}
           <Header />
           

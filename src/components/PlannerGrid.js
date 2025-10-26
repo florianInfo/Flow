@@ -16,9 +16,9 @@ const TimeSlot = ({ day, time, children }) => {
     <div
       ref={setNodeRef}
       className={`
-         h-[20px] relative select-none
-        ${isOver ? 'bg-sage/20' : ''}
-        ${time.endsWith(':00') ? 'border-t border-black' : 'border-t border-dotted border-black'}
+         h-[20px] relative select-none wooden-slot
+        ${isOver ? 'bg-green-300/30' : ''}
+        ${time.endsWith(':00') ? 'border-t-2 border-amber-800' : 'border-t border-dotted border-amber-700'}
       `}
     >
       {children}
@@ -173,19 +173,19 @@ const PlannerGrid = () => {
   };
 
   return (
-    <div className="bg-wood-100">
+    <div className="bg-amber-50">
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         {/* Header fixe avec les jours */}
-        <div className="flex w-full bg-wood-400 border-b border-wood-200 sticky top-0 z-20 flex-1">
+        <div className="flex w-full wooden-border sticky top-0 z-20 flex-1">
           {/* Colonne des heures (fixe) */}
-          <div className="bg-wood-100 border-r border-wood-200 w-16 min-w-[60px] flex items-center justify-center">
-            <span className="text-wood-600 font-medium text-xs">Heures</span>
+          <div className="wooden-raised border-r border-amber-800 w-16 min-w-[60px] flex items-center justify-center">
+            <span className="burned-text font-medium text-xs">Heures</span>
           </div>
           
           {/* En-têtes des jours */}
           {DAYS.map((day, dayIndex) => (
-            <div key={day} className="flex-1 min-w-[120px] flex items-center justify-center border-r border-dotted border-wood-200">
-              <span className="text-wood-800 font-semibold text-sm">{day}</span>
+            <div key={day} className="flex-1 min-w-[120px] flex items-center justify-center border-r border-dotted border-amber-700 wooden-raised">
+              <span className="burned-text font-semibold text-sm">{day}</span>
             </div>
           ))}
         </div>
@@ -194,10 +194,10 @@ const PlannerGrid = () => {
         <div ref={scrollContainerRef} className="flex-1">
           <div className="flex">
             {/* Colonne des heures (scrollable) - synchronisée avec le contenu */}
-            <div className="bg-wood-100 border-r border-wood-200 w-16 min-w-[60px] sticky left-0 z-10">
+            <div className="wooden-raised border-r border-amber-800 w-16 min-w-[60px] sticky left-0 z-10">
               {TIME_SLOTS.map((time) => (
-                <div key={time} className={`h-[20px] flex items-center justify-center text-xs text-wood-600 ${
-                  time.endsWith(':00') ? 'border-t border-wood-300' : 'border-t border-dotted border-wood-200'
+                <div key={time} className={`h-[20px] flex items-center justify-center text-xs burned-text ${
+                  time.endsWith(':00') ? 'border-t border-amber-600' : 'border-t border-dotted border-amber-500'
                 }`}>
                   {time.endsWith(':00') && time}
                 </div>
@@ -206,7 +206,7 @@ const PlannerGrid = () => {
 
             {/* Colonnes des jours (scrollables) */}
             {DAYS.map((day, dayIndex) => (
-              <div key={day} className="flex-1 min-w-[120px] border-r border-dotted border-wood-200">
+              <div key={day} className="flex-1 min-w-[120px] border-r border-dotted border-amber-700">
                 {TIME_SLOTS.map((time) => (
                   <TimeSlot key={`${day}-${time}`} day={dayIndex} time={time}>
                     <div className="p-1 space-y-1">
