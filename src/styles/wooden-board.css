@@ -72,6 +72,7 @@
   background: 
     linear-gradient(135deg, var(--wood-light) 0%, var(--wood-grain-light) 100%);
   border: 1px solid var(--wood-medium);
+  border-radius: 3px;
   box-shadow: 
     inset 0 1px 2px rgba(255, 255, 255, 0.3),
     inset 0 -1px 2px rgba(0, 0, 0, 0.1);
@@ -93,6 +94,7 @@
 /* Classe pour les bordures de tableau */
 .wooden-border {
   background: var(--wood-medium);
+  border-radius: 3px;
   box-shadow: 
     inset 0 0 10px rgba(0, 0, 0, 0.2),
     0 2px 8px rgba(0, 0, 0, 0.1);
@@ -110,6 +112,7 @@
 .wooden-raised {
   background: 
     linear-gradient(135deg, var(--wood-light) 0%, var(--wood-medium) 100%);
+  border-radius: 3px;
   box-shadow: 
     0 4px 8px rgba(0, 0, 0, 0.3),
     0 2px 4px rgba(0, 0, 0, 0.2),
@@ -121,6 +124,7 @@
 .wooden-inset {
   background: 
     linear-gradient(135deg, var(--wood-dark) 0%, var(--wood-medium) 100%);
+  border-radius: 3px;
   box-shadow: 
     inset 0 2px 4px rgba(0, 0, 0, 0.3),
     inset 0 1px 2px rgba(0, 0, 0, 0.2),
@@ -131,6 +135,7 @@
 /* Animation pour les éléments interactifs */
 .wooden-interactive {
   transition: all 0.2s ease;
+  border-radius: 3px;
 }
 
 .wooden-interactive:hover {
@@ -206,13 +211,8 @@
     0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-/* Responsive design pour le bois */
-@media (max-width: 768px) {
-  .wooden-board {
-    border-width: 4px;
-  }
-  
-  .wooden-board::before {
-    background-size: 6px 6px;
-  }
+/* Classe pour les colonnes avec background wood-dark */
+.wooden-column {
+  background: var(--wood-dark);
+  border-radius: 3px;
 }
