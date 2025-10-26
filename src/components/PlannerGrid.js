@@ -16,7 +16,7 @@ const TimeSlot = ({ day, time, children }) => {
     <div
       ref={setNodeRef}
       className={`
-         h-[20px] relative
+         h-[20px] relative select-none
         ${isOver ? 'bg-sage/20' : ''}
         ${time.endsWith(':00') ? 'border-t border-black' : 'border-t border-dotted border-black'}
       `}
@@ -42,7 +42,7 @@ const DraggableActivity = ({ activity, isTemplate = false }) => {
       style={style}
       {...listeners}
       {...attributes}
-      className={isDragging ? 'z-50' : ''}
+      className={`${isDragging ? 'z-50' : ''} cursor-grab select-none`}
     >
       <ActivityBlock
         activity={activity}
@@ -173,7 +173,7 @@ const PlannerGrid = () => {
   };
 
   return (
-    <div className="bg-wood-100 z-10">
+    <div className="bg-wood-100">
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         {/* Header fixe avec les jours */}
         <div className="flex w-full bg-wood-400 border-b border-wood-200 sticky top-0 z-20 flex-1">

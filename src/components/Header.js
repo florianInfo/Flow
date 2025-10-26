@@ -15,7 +15,7 @@ const Header = () => {
       className="bg-gradient-to-r from-wood-800 to-wood-700 text-white shadow-lg"
     >
       <div className="px-6 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between cursor-default select-none">
           {/* Logo et titre */}
           <motion.div
             initial={{ x: -20, opacity: 0 }}
@@ -43,7 +43,7 @@ const Header = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handlePrint}
-              className="flex items-center space-x-2 px-4 py-2 bg-wood-600 hover:bg-wood-500 rounded-lg transition-colors duration-200"
+              className="flex items-center space-x-2 px-4 py-2 bg-wood-600 hover:bg-wood-500 rounded-lg transition-colors duration-200 select-none cursor-pointer"
             >
               <Download className="w-4 h-4" />
               <span className="text-sm font-medium">Imprimer</span>
@@ -52,7 +52,7 @@ const Header = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2 bg-wood-600 hover:bg-wood-500 rounded-lg transition-colors duration-200"
+              className="p-2 bg-wood-600 hover:bg-wood-500 rounded-lg transition-colors duration-200 select-none cursor-pointer"
             >
               <Settings className="w-5 h-5" />
             </motion.button>

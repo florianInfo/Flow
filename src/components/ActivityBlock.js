@@ -11,8 +11,8 @@ const ActivityBlock = ({ activity, isTemplate = false, className = '', style = {
       whileTap={{ scale: 0.98 }}
       className={`
         relative px-4 py-2 rounded-lg shadow-sm border border-white/20
-        text-white font-medium text-sm min-w-[120px] text-center
-        ${isTemplate ? 'cursor-move' : ''}
+        text-white font-medium text-sm min-w-[120px] text-center select-none
+        ${isTemplate ? 'cursor-move' : 'cursor-pointer'}
         ${className}
       `}
       style={{

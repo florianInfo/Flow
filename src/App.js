@@ -5,6 +5,7 @@ import { PlannerProvider } from './context/PlannerContext';
 import Header from './components/Header';
 import PlannerGrid from './components/PlannerGrid';
 import ActivityCreator from './components/ActivityCreator';
+import ActivityModal from './components/ActivityModal';
 import StatisticsPanel from './components/StatisticsPanel';
 import NotificationSystem from './components/NotificationSystem';
 import PrintView from './components/PrintView';
@@ -13,6 +14,7 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 function App() {
   const [planner, setPlanner] = useLocalStorage('flow-planner', new Planner());
   const [notifications, setNotifications] = useState([]);
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
 
   // Sauvegarder automatiquement les changements
   useEffect(() => {
@@ -34,15 +36,26 @@ function App() {
     }, 3000);
   };
 
+  const handleActivityCreated = (activity) => {
+    setPlanner(prev => {
+      const newPlanner = new Planner();
+      Object.assign(newPlanner, prev);
+      newPlanner.addActivity(activity);
+      return newPlanner;
+    });
+    addNotification(`Activité "${activity.title}" créée !`, 'positive');
+  };
+
   const contextValue = {
     planner,
     setPlanner,
-    addNotification
+    addNotification,
+    openActivityModal: () => setIsActivityModalOpen(true)
   };
 
   return (
     <PlannerProvider value={contextValue}>
-      <div className="min-h-screen bg-gradient-to-br from-wood-50 to-wood-100">
+      <div className="min-h-screen bg-gradient-to-br from-wood-50 to-wood-100 cursor-default select-none">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -69,6 +82,13 @@ function App() {
         
         {/* Système de notifications */}
         <NotificationSystem notifications={notifications} />
+        
+        {/* Modal de création d'activité */}
+        <ActivityModal 
+          isOpen={isActivityModalOpen}
+          onClose={() => setIsActivityModalOpen(false)}
+          onActivityCreated={handleActivityCreated}
+        />
         
         {/* Vue d'impression */}
         <PrintView />
