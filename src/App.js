@@ -59,6 +59,22 @@ function App() {
     });
   };
 
+  const handleActivityDeleted = (activity) => {
+    setPlanner(prev => {
+      const newPlanner = new Planner();
+      Object.assign(newPlanner, prev);
+      
+      // Supprimer l'activité
+      newPlanner.activities = newPlanner.activities.filter(a => a.id !== activity.id);
+      
+      // Supprimer aussi toutes les activités programmées liées à cette activité
+      newPlanner.scheduledActivities = newPlanner.scheduledActivities.filter(sa => sa.activityId !== activity.id);
+      
+      addNotification(`Activité "${activity.title}" supprimée !`, 'positive');
+      return newPlanner;
+    });
+  };
+
   const contextValue = {
     planner,
     setPlanner,
@@ -71,6 +87,10 @@ function App() {
       console.log('editActivity called with:', activity);
       setEditingActivity(activity);
       setIsActivityModalOpen(true);
+    },
+    deleteActivity: (activity) => {
+      console.log('deleteActivity called with:', activity);
+      handleActivityDeleted(activity);
     }
   };
 
