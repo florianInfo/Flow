@@ -51,18 +51,18 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 select-none">
       <header className="text-center py-8">
-        <h1 className="text-4xl font-bold text-gray-800">Flow</h1>
+        <h1 className="text-4xl font-bold text-gray-800 select-none">Flow</h1>
       </header>
 
-      <main className="flex items-center justify-center min-h-[calc(100vh-200px)] px-4 py-8">
-        <div className="flex flex-wrap justify-center items-center gap-4 max-w-6xl">
+      <main className="flex items-center justify-center min-h-[calc(100vh-200px)] px-4 py-8 select-none">
+        <div className="flex flex-wrap justify-center items-center gap-4 max-w-6xl select-none">
           {activities.map((activity, index) => (
             <div
               key={activity.id || index}
               style={getRandomTransform()}
-              className="hover:scale-110 transition-transform duration-300"
+              className="cursor-pointer hover:scale-110 transition-transform duration-300"
             >
               <ActivityBadge
                 activity={activity}
