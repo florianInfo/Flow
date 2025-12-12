@@ -32,6 +32,17 @@
   body {
     @apply bg-gray-50 text-gray-900;
     background-color: var(--color-wood-bg);
+    user-select: none;
+    cursor: default;
+  }
+  
+  * {
+    user-select: none;
+    cursor: default;
+  }
+  
+  button, a, [role="button"] {
+    cursor: pointer;
   }
 }
 
