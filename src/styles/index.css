@@ -2,9 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Variables CSS - Palette de couleurs de la maquette vintage */
+:root {
+  /* Couleurs principales */
+  --color-wood-bg: #EADDCD;           /* Fond principal beige clair avec texture bois */
+  --color-olive-dark: #5B7240;        /* Bordures de grille et texte horaire (vert olive foncé) */
+  --color-olive-light: #6B8054;       /* En-têtes des jours (vert olive clair) */
+  
+  /* Palette de couleurs secondaires */
+  --color-olive-medium: #6B8054;      /* Vert olive moyen */
+  --color-khaki-brown: #847C59;       /* Vert kaki tirant sur le brun */
+  --color-mustard: #D5A04D;           /* Orange moutarde doux et terreux */
+  --color-burnt-orange: #C4794B;      /* Orange brûlé ou terre de Sienne */
+  --color-teal-muted: #6B918B;        /* Vert-bleu (teal) sourd */
+  
+  /* Variantes pour utilisation dans les composants */
+  --color-text-primary: var(--color-olive-dark);
+  --color-text-secondary: var(--color-khaki-brown);
+  --color-border: var(--color-olive-dark);
+  --color-header-bg: var(--color-olive-light);
+  --color-accent-1: var(--color-olive-medium);
+  --color-accent-2: var(--color-khaki-brown);
+  --color-accent-3: var(--color-mustard);
+  --color-accent-4: var(--color-burnt-orange);
+  --color-accent-5: var(--color-teal-muted);
+}
+
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900;
+    background-color: var(--color-wood-bg);
   }
 }
 
