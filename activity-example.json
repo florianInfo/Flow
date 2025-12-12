@@ -205,6 +205,52 @@
           "percent": 40
         }
       ]
+    },
+    {
+      "id": 15,
+      "title": "Activité partagée A",
+      "description": "Première activité qui partage les mêmes recurringActivities avec l'activité 16",
+      "color": "TEAL_MUTED",
+      "recurringActivities": [
+        {
+          "id": 150,
+          "targetedActivityId": 1,
+          "percent": 30
+        },
+        {
+          "id": 151,
+          "targetedActivityId": 3,
+          "percent": 25
+        },
+        {
+          "id": 152,
+          "targetedActivityId": 5,
+          "percent": 20
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Activité partagée B",
+      "description": "Deuxième activité qui partage les mêmes recurringActivities avec l'activité 15",
+      "color": "BURNT_ORANGE",
+      "recurringActivities": [
+        {
+          "id": 160,
+          "targetedActivityId": 1,
+          "percent": 50
+        },
+        {
+          "id": 161,
+          "targetedActivityId": 3,
+          "percent": 25
+        },
+        {
+          "id": 162,
+          "targetedActivityId": 5,
+          "percent": 20
+        }
+      ]
     }
   ]
 }
