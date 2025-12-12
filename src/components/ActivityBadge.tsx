@@ -33,7 +33,10 @@ export default function ActivityBadge({ activity, onDelete }: ActivityBadgeProps
       <span className="font-medium cursor-pointer">{activity.title}</span>
       <span className="text-sm opacity-90 cursor-pointer">({recurringCount})</span>
       <button
-        onClick={() => onDelete(activity.id)}
+        onClick={(e) => {
+          e.stopPropagation()
+          onDelete(activity.id)
+        }}
         className="ml-1 cursor-pointer hover:opacity-70 hover:scale-125 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded"
         style={{
           color: textColor,

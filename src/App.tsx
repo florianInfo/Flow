@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Activity } from './models/Activity'
 import ActivityBadge from './components/ActivityBadge'
+import ActivityModal from './components/ActivityModal'
 
 interface ActivitiesData {
   activities: Activity[]
@@ -9,6 +10,8 @@ interface ActivitiesData {
 function App() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
     fetch('/activity-example.json')
@@ -29,6 +32,31 @@ function App() {
     if (id !== undefined) {
       setActivities(activities.filter(activity => activity.id !== id))
     }
+  }
+
+  const handleActivityClick = (activity: Activity) => {
+    setSelectedActivity(activity)
+    setIsModalOpen(true)
+  }
+
+  const handleCreateActivity = () => {
+    setSelectedActivity(null)
+    setIsModalOpen(true)
+  }
+
+  const handleSaveActivity = (activity: Activity) => {
+    if (activity.id) {
+      // Modifier une activité existante
+      setActivities(activities.map(a => a.id === activity.id ? activity : a))
+    } else {
+      // Créer une nouvelle activité
+      const newId = Math.max(...activities.map(a => a.id || 0), 0) + 1
+      setActivities([...activities, { ...activity, id: newId }])
+    }
+  }
+
+  const handleDeleteActivity = (id: number | undefined) => {
+    handleDelete(id)
   }
 
   // Générer des transformations aléatoires pour chaque badge
@@ -63,6 +91,7 @@ function App() {
               key={activity.id || index}
               style={getRandomTransform()}
               className="cursor-pointer hover:scale-110 transition-transform duration-300"
+              onClick={() => handleActivityClick(activity)}
             >
               <ActivityBadge
                 activity={activity}
@@ -71,7 +100,23 @@ function App() {
             </div>
           ))}
         </div>
+        
+        <button
+          onClick={handleCreateActivity}
+          className="fixed bottom-8 right-8 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors cursor-pointer"
+        >
+          + Créer une activité
+        </button>
       </main>
+
+      <ActivityModal
+        activity={selectedActivity}
+        activities={activities}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveActivity}
+        onDelete={handleDeleteActivity}
+      />
     </div>
   )
 }
