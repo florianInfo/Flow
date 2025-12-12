@@ -77,11 +77,27 @@ export default function ActivityModal({
     return found?.title || `Activité #${id}`
   }
 
+  // Déterminer la couleur du texte en fonction de la luminosité du fond
+  const getTextColor = (hex: string): string => {
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
+    // Calcul de la luminosité relative
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+    return luminance > 0.5 ? '#000000' : '#FFFFFF'
+  }
+
+  const backgroundColor = getColorHex(formData.color)
+  const textColor = getTextColor(backgroundColor)
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div 
+        className="rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        style={{ backgroundColor, color: textColor }}
+      >
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b">
+        <div className="flex items-start justify-between p-6 border-b" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
           <div className="flex-1">
             {isEditing ? (
               <input
@@ -92,18 +108,19 @@ export default function ActivityModal({
                 className="text-2xl font-bold w-full border-none outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
               />
             ) : (
-              <h2 className="text-2xl font-bold text-gray-800">{formData.title}</h2>
+              <h2 className="text-2xl font-bold">{formData.title}</h2>
             )}
             {isEditing ? (
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Description de l'activité"
-                className="text-gray-600 italic w-full mt-2 border-none outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 resize-none"
+                className="italic w-full mt-2 border-none outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 resize-none opacity-90"
+                style={{ color: textColor, backgroundColor: 'transparent' }}
                 rows={3}
               />
             ) : (
-              <p className="text-gray-600 italic mt-2">{formData.description}</p>
+              <p className="italic mt-2 opacity-90">{formData.description}</p>
             )}
           </div>
           
@@ -116,11 +133,12 @@ export default function ActivityModal({
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-gray-600"
+                  className="h-5 w-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                   strokeWidth={2}
+                  style={{ color: textColor }}
                 >
                   <path
                     strokeLinecap="round"
@@ -136,11 +154,12 @@ export default function ActivityModal({
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-red-600"
+                  className="h-5 w-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                   strokeWidth={2}
+                  style={{ color: textColor === '#FFFFFF' ? '#FEE2E2' : '#DC2626' }}
                 >
                   <path
                     strokeLinecap="round"
@@ -156,7 +175,7 @@ export default function ActivityModal({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {/* Panel collapsable pour recurringActivities */}
-          <div className="border rounded-lg">
+          <div className="border rounded-lg" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)' }}>
             <button
               onClick={() => setIsRecurringOpen(!isRecurringOpen)}
               className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
@@ -164,11 +183,12 @@ export default function ActivityModal({
               <div className="flex items-center gap-2">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className={`h-5 w-5 text-gray-600 transition-transform ${isRecurringOpen ? 'rotate-90' : ''}`}
+                  className={`h-5 w-5 transition-transform ${isRecurringOpen ? 'rotate-90' : ''}`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                   strokeWidth={2}
+                  style={{ color: textColor }}
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
@@ -179,7 +199,7 @@ export default function ActivityModal({
             </button>
             
             {isRecurringOpen && (
-              <div className="border-t p-4">
+              <div className="border-t p-4" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
                 {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
                   <ul className="space-y-2">
                     {formData.recurringActivities.map((recurring, index) => {
@@ -192,7 +212,16 @@ export default function ActivityModal({
                                 onActivityClick(recurring.targetedActivityId)
                               }
                             }}
-                            className="text-blue-600 underline cursor-pointer hover:text-blue-800 transition-colors"
+                            className="underline cursor-pointer transition-colors"
+                            style={{ 
+                              color: textColor === '#FFFFFF' ? '#93C5FD' : '#2563EB',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = textColor === '#FFFFFF' ? '#DBEAFE' : '#1D4ED8'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = textColor === '#FFFFFF' ? '#93C5FD' : '#2563EB'
+                            }}
                             disabled={!onActivityClick || !targetActivity}
                           >
                             {getActivityName(recurring.targetedActivityId)} - {recurring.percent}%
@@ -202,7 +231,7 @@ export default function ActivityModal({
                     })}
                   </ul>
                 ) : (
-                  <p className="text-gray-500 italic text-sm">Aucune activité récurrente</p>
+                  <p className="italic text-sm opacity-75">Aucune activité récurrente</p>
                 )}
               </div>
             )}
@@ -210,17 +239,24 @@ export default function ActivityModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-4 p-6 border-t bg-gray-50">
+        <div className="flex items-center justify-end gap-4 p-6 border-t" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 rounded-lg transition-colors"
+            style={{ 
+              backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+              color: textColor
+            }}
           >
             Annuler
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 text-white rounded-lg transition-colors"
-            style={{ backgroundColor: getColorHex(formData.color) }}
+            className="px-4 py-2 rounded-lg transition-colors"
+            style={{ 
+              backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
+              color: textColor
+            }}
           >
             {isCreateMode ? 'Créer' : 'Modifier'}
           </button>
