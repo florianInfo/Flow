@@ -1,0 +1,256 @@
+{
+  "activities": [
+    {
+      "id": 1,
+      "title": "Développement Frontend",
+      "description": "Développement de l'interface utilisateur avec React et TypeScript, implémentation des composants réutilisables et optimisation des performances",
+      "color": "TEAL_MUTED",
+      "recurringActivities": [
+        {
+          "id": 10,
+          "targetedActivityId": 2,
+          "percent": 30
+        },
+        {
+          "id": 11,
+          "targetedActivityId": 3,
+          "percent": 25
+        },
+        {
+          "id": 12,
+          "targetedActivityId": 4,
+          "percent": 15
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Réunion d'équipe",
+      "description": "Réunion hebdomadaire pour synchroniser l'équipe sur les projets en cours et planifier les prochaines itérations",
+      "color": "OLIVE_MEDIUM",
+      "recurringActivities": [
+        {
+          "id": 20,
+          "targetedActivityId": 1,
+          "percent": 50
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Code Review",
+      "description": "Revue de code des pull requests de l'équipe, vérification de la qualité, des bonnes pratiques et de la conformité aux standards",
+      "color": "BURNT_ORANGE",
+      "recurringActivities": []
+    },
+    {
+      "id": 4,
+      "title": "Formation et apprentissage",
+      "description": "Temps dédié à l'apprentissage de nouvelles technologies, suivi de formations en ligne et lecture de documentation technique",
+      "color": "MUSTARD",
+      "recurringActivities": [
+        {
+          "id": 40,
+          "targetedActivityId": 1,
+          "percent": 20
+        },
+        {
+          "id": 41,
+          "targetedActivityId": 5,
+          "percent": 10
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Documentation technique",
+      "description": "Rédaction et mise à jour de la documentation technique, guides d'utilisation et architecture du système",
+      "color": "KHAKI_BROWN",
+      "recurringActivities": [
+        {
+          "id": 50,
+          "targetedActivityId": 1,
+          "percent": 15
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Tests et QA",
+      "description": "Écriture de tests unitaires, d'intégration et end-to-end, exécution de tests manuels et automatisation des tests",
+      "color": "OLIVE_DARK",
+      "recurringActivities": [
+        {
+          "id": 60,
+          "targetedActivityId": 1,
+          "percent": 40
+        },
+        {
+          "id": 61,
+          "targetedActivityId": 3,
+          "percent": 30
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Architecture et design",
+      "description": "Conception de l'architecture système, design patterns, décisions techniques et revue d'architecture",
+      "color": "OLIVE_LIGHT",
+      "recurringActivities": [
+        {
+          "id": 70,
+          "targetedActivityId": 1,
+          "percent": 10
+        },
+        {
+          "id": 71,
+          "targetedActivityId": 4,
+          "percent": 5
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Maintenance et debugging",
+      "description": "Correction de bugs, maintenance du code legacy, optimisation et refactoring de code existant",
+      "color": "WOOD_BG",
+      "recurringActivities": [
+        {
+          "id": 80,
+          "targetedActivityId": 1,
+          "percent": 20
+        },
+        {
+          "id": 81,
+          "targetedActivityId": 6,
+          "percent": 25
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "dependance cyclique",
+      "description": "Activité avec dépendance cyclique dans les recurringActivities",
+      "color": "TEAL_MUTED",
+      "recurringActivities": [
+        {
+          "id": 90,
+          "targetedActivityId": 10,
+          "percent": 50
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Activité liée à la dépendance cyclique",
+      "description": "Cette activité référence l'activité 9, créant ainsi un cycle",
+      "color": "BURNT_ORANGE",
+      "recurringActivities": [
+        {
+          "id": 100,
+          "targetedActivityId": 9,
+          "percent": 60
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "dépendance cyclique niv4",
+      "description": "Activité avec dépendance cyclique de niveau 4",
+      "color": "OLIVE_DARK",
+      "recurringActivities": [
+        {
+          "id": 110,
+          "targetedActivityId": 12,
+          "percent": 25
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "dépendance cyclique niv1",
+      "description": "Premier niveau de la dépendance cyclique",
+      "color": "MUSTARD",
+      "recurringActivities": [
+        {
+          "id": 120,
+          "targetedActivityId": 13,
+          "percent": 30
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "dépendance cyclique niv2",
+      "description": "Deuxième niveau de la dépendance cyclique",
+      "color": "KHAKI_BROWN",
+      "recurringActivities": [
+        {
+          "id": 130,
+          "targetedActivityId": 14,
+          "percent": 35
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "dépendance cyclique niv3",
+      "description": "Troisième niveau de la dépendance cyclique, la 4e recurringActivity pointe vers la première Activity",
+      "color": "OLIVE_LIGHT",
+      "recurringActivities": [
+        {
+          "id": 140,
+          "targetedActivityId": 11,
+          "percent": 40
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Activité partagée A",
+      "description": "Première activité qui partage les mêmes recurringActivities avec l'activité 16",
+      "color": "TEAL_MUTED",
+      "recurringActivities": [
+        {
+          "id": 150,
+          "targetedActivityId": 1,
+          "percent": 30
+        },
+        {
+          "id": 151,
+          "targetedActivityId": 3,
+          "percent": 25
+        },
+        {
+          "id": 152,
+          "targetedActivityId": 5,
+          "percent": 20
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Activité partagée B",
+      "description": "Deuxième activité qui partage les mêmes recurringActivities avec l'activité 15",
+      "color": "BURNT_ORANGE",
+      "recurringActivities": [
+        {
+          "id": 160,
+          "targetedActivityId": 1,
+          "percent": 50
+        },
+        {
+          "id": 161,
+          "targetedActivityId": 3,
+          "percent": 25
+        },
+        {
+          "id": 162,
+          "targetedActivityId": 5,
+          "percent": 20
+        }
+      ]
+    }
+  ]
+}
