@@ -59,6 +59,14 @@ function App() {
     handleDelete(id)
   }
 
+  const handleActivityClickInModal = (activityId: number) => {
+    const clickedActivity = activities.find(a => a.id === activityId)
+    if (clickedActivity) {
+      setSelectedActivity(clickedActivity)
+      // Le modal reste ouvert, mais avec la nouvelle activité
+    }
+  }
+
   // Générer des transformations aléatoires pour chaque badge
   const getRandomTransform = () => {
     const rotation = (Math.random() - 0.5) * 10 // Rotation entre -5° et 5°
@@ -116,6 +124,7 @@ function App() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveActivity}
         onDelete={handleDeleteActivity}
+        onActivityClick={handleActivityClickInModal}
       />
     </div>
   )

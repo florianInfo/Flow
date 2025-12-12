@@ -9,6 +9,7 @@ interface ActivityModalProps {
   onClose: () => void
   onSave: (activity: Activity) => void
   onDelete: (id: number | undefined) => void
+  onActivityClick?: (activityId: number) => void // Callback pour changer l'activité affichée
 }
 
 export default function ActivityModal({
@@ -18,6 +19,7 @@ export default function ActivityModal({
   onClose,
   onSave,
   onDelete,
+  onActivityClick,
 }: ActivityModalProps) {
   const isCreateMode = !activity || !activity.id
   const [isEditing, setIsEditing] = useState(isCreateMode)
@@ -180,23 +182,24 @@ export default function ActivityModal({
               <div className="border-t p-4">
                 {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
                   <ul className="space-y-2">
-                    {formData.recurringActivities.map((recurring, index) => (
-                      <li key={recurring.id || index} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 text-gray-500"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                        <span className="flex-1">
-                          {getActivityName(recurring.targetedActivityId)} - {recurring.percent}%
-                        </span>
-                      </li>
-                    ))}
+                    {formData.recurringActivities.map((recurring, index) => {
+                      const targetActivity = activities.find(a => a.id === recurring.targetedActivityId)
+                      return (
+                        <li key={recurring.id || index} className="p-2 hover:bg-gray-50 rounded">
+                          <button
+                            onClick={() => {
+                              if (onActivityClick && targetActivity) {
+                                onActivityClick(recurring.targetedActivityId)
+                              }
+                            }}
+                            className="text-blue-600 underline cursor-pointer hover:text-blue-800 transition-colors"
+                            disabled={!onActivityClick || !targetActivity}
+                          >
+                            {getActivityName(recurring.targetedActivityId)} - {recurring.percent}%
+                          </button>
+                        </li>
+                      )
+                    })}
                   </ul>
                 ) : (
                   <p className="text-gray-500 italic text-sm">Aucune activité récurrente</p>
