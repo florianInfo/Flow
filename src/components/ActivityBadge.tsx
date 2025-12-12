@@ -30,11 +30,11 @@ export default function ActivityBadge({ activity, onDelete }: ActivityBadgeProps
         color: textColor,
       }}
     >
-      <span className="font-medium">{activity.title}</span>
-      <span className="text-sm opacity-90">({recurringCount})</span>
+      <span className="font-medium cursor-pointer">{activity.title}</span>
+      <span className="text-sm opacity-90 cursor-pointer">({recurringCount})</span>
       <button
         onClick={() => onDelete(activity.id)}
-        className="ml-1 hover:opacity-70 hover:scale-125 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded"
+        className="ml-1 cursor-pointer hover:opacity-70 hover:scale-125 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded"
         style={{
           color: textColor,
         }}
@@ -42,13 +42,14 @@ export default function ActivityBadge({ activity, onDelete }: ActivityBadgeProps
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="h-4 w-4"
+          className="h-4 w-4 cursor-pointer"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
           strokeWidth={2}
         >
           <path
+          className='cursor-pointer'
             strokeLinecap="round"
             strokeLinejoin="round"
             d="M6 18L18 6M6 6l12 12"
