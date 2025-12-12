@@ -127,6 +127,84 @@
           "percent": 25
         }
       ]
+    },
+    {
+      "id": 9,
+      "title": "dependance cyclique",
+      "description": "Activité avec dépendance cyclique dans les recurringActivities",
+      "color": "TEAL_MUTED",
+      "recurringActivities": [
+        {
+          "id": 90,
+          "targetedActivityId": 10,
+          "percent": 50
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Activité liée à la dépendance cyclique",
+      "description": "Cette activité référence l'activité 9, créant ainsi un cycle",
+      "color": "BURNT_ORANGE",
+      "recurringActivities": [
+        {
+          "id": 100,
+          "targetedActivityId": 9,
+          "percent": 60
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "dépendance cyclique niv4",
+      "description": "Activité avec dépendance cyclique de niveau 4",
+      "color": "OLIVE_DARK",
+      "recurringActivities": [
+        {
+          "id": 110,
+          "targetedActivityId": 12,
+          "percent": 25
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "dépendance cyclique niv1",
+      "description": "Premier niveau de la dépendance cyclique",
+      "color": "MUSTARD",
+      "recurringActivities": [
+        {
+          "id": 120,
+          "targetedActivityId": 13,
+          "percent": 30
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "dépendance cyclique niv2",
+      "description": "Deuxième niveau de la dépendance cyclique",
+      "color": "KHAKI_BROWN",
+      "recurringActivities": [
+        {
+          "id": 130,
+          "targetedActivityId": 14,
+          "percent": 35
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "dépendance cyclique niv3",
+      "description": "Troisième niveau de la dépendance cyclique, la 4e recurringActivity pointe vers la première Activity",
+      "color": "OLIVE_LIGHT",
+      "recurringActivities": [
+        {
+          "id": 140,
+          "targetedActivityId": 11,
+          "percent": 40
+        }
+      ]
     }
   ]
 }
