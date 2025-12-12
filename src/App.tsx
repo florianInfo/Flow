@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { Activity } from './models/Activity'
-import ActivityCard from './components/ActivityCard'
-import ActivityForm from './components/ActivityForm'
 
 function App() {
   const [activities, setActivities] = useState<Activity[]>([])
