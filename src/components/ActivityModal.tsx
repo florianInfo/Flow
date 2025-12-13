@@ -26,6 +26,9 @@ export default function ActivityModal({
   const [isRecurringOpen, setIsRecurringOpen] = useState(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const [isCreatingNewRecurring, setIsCreatingNewRecurring] = useState(false)
+  const [newRecurringTitle, setNewRecurringTitle] = useState('')
+  const [pendingRecurringTitle, setPendingRecurringTitle] = useState<string | null>(null)
   
   const [formData, setFormData] = useState<Activity>({
     id: activity?.id,
@@ -57,6 +60,34 @@ export default function ActivityModal({
       }
     }
   }, [activity, isCreateMode, isOpen])
+
+  // Détecter quand une nouvelle activité est créée pour l'ajouter aux recurringActivities
+  useEffect(() => {
+    if (pendingRecurringTitle) {
+      const createdActivity = activities.find(a => a.title === pendingRecurringTitle && a.id)
+      if (createdActivity && createdActivity.id) {
+        // Ajouter la nouvelle activité récurrente
+        const newRecurringActivity: RecurringActivity = {
+          targetedActivityId: createdActivity.id,
+          percent: 0,
+        }
+
+        setFormData(prevFormData => {
+          const updatedFormData = {
+            ...prevFormData,
+            recurringActivities: [...(prevFormData.recurringActivities || []), newRecurringActivity],
+          }
+          
+          // Sauvegarder automatiquement sans fermer la modal
+          onSave(updatedFormData)
+          
+          return updatedFormData
+        })
+        
+        setPendingRecurringTitle(null)
+      }
+    }
+  }, [activities, pendingRecurringTitle, onSave])
 
   if (!isOpen) return null
 
@@ -151,6 +182,60 @@ export default function ActivityModal({
     setDragOverIndex(null)
   }
 
+  const handlePercentChange = (index: number, newPercent: number) => {
+    if (newPercent < 0 || newPercent > 100) return
+    
+    const newRecurringActivities = [...(formData.recurringActivities || [])]
+    newRecurringActivities[index] = {
+      ...newRecurringActivities[index],
+      percent: newPercent,
+    }
+
+    const updatedFormData = {
+      ...formData,
+      recurringActivities: newRecurringActivities,
+    }
+    
+    setFormData(updatedFormData)
+    
+    // Sauvegarder automatiquement sans fermer la modal
+    onSave(updatedFormData)
+  }
+
+  const handleCreateNewRecurring = () => {
+    setIsCreatingNewRecurring(true)
+    setNewRecurringTitle('')
+  }
+
+  const handleValidateNewRecurring = () => {
+    if (!newRecurringTitle.trim()) {
+      return
+    }
+
+    const title = newRecurringTitle.trim()
+
+    // Créer une nouvelle activité avec juste le titre
+    const newActivity: Activity = {
+      title: title,
+      description: '',
+      color: Color.TEAL_MUTED,
+      recurringActivities: [],
+    }
+
+    // Sauvegarder la nouvelle activité (elle sera créée avec un ID)
+    onSave(newActivity)
+
+    // Marquer le titre comme en attente pour le useEffect
+    setPendingRecurringTitle(title)
+    setIsCreatingNewRecurring(false)
+    setNewRecurringTitle('')
+  }
+
+  const handleCancelNewRecurring = () => {
+    setIsCreatingNewRecurring(false)
+    setNewRecurringTitle('')
+  }
+
   const backgroundColor = getColorHex(formData.color)
   const textColor = getTextColor(backgroundColor)
 
@@ -232,12 +317,11 @@ export default function ActivityModal({
             height: '40%',
             maxHeight: '40vh'
           }}>
-            <button
-              onClick={() => setIsRecurringOpen(!isRecurringOpen)}
-              className="w-full cursor-pointer flex items-center justify-between hover:bg-gray-50 transition-colors sticky top-0 z-10"
-              style={{ backgroundColor: backgroundColor }}
-            >
-              <div className="flex items-center gap-2">
+            <div className="w-full flex items-center justify-between hover:bg-gray-50 transition-colors sticky top-0 z-10" style={{ backgroundColor: backgroundColor }}>
+              <button
+                onClick={() => setIsRecurringOpen(!isRecurringOpen)}
+                className="flex-1 cursor-pointer flex items-center gap-2"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className={`h-5 w-5 cursor-pointer transition-transform ${isRecurringOpen ? 'rotate-90' : ''}`}
@@ -252,12 +336,101 @@ export default function ActivityModal({
                 <span className="font-medium cursor-pointer">
                   Activités récurrentes ({formData.recurringActivities?.length || 0})
                 </span>
-              </div>
-            </button>
+              </button>
+              <button
+                onClick={handleCreateNewRecurring}
+                className="p-1 cursor-pointer hover:bg-gray-100 rounded transition-colors mr-2"
+                aria-label="Ajouter une activité récurrente"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  style={{ color: textColor }}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </button>
+            </div>
             
             {isRecurringOpen && (
               <div className="border-t flex-1 overflow-y-auto" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
                 <div className="p-2">
+                  {isCreatingNewRecurring && (
+                    <div className="p-2 rounded flex items-center justify-between mb-2 border" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)' }}>
+                      <input
+                        type="text"
+                        value={newRecurringTitle}
+                        onChange={(e) => setNewRecurringTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleValidateNewRecurring()
+                          } else if (e.key === 'Escape') {
+                            handleCancelNewRecurring()
+                          }
+                        }}
+                        placeholder="Titre de la nouvelle activité"
+                        className="flex-1 border outline-none focus:ring-2 rounded px-2 py-1 mr-2"
+                        style={{
+                          '--tw-ring-color': textColor,
+                          backgroundColor: 'transparent',
+                          color: textColor
+                        } as React.CSSProperties}
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={handleValidateNewRecurring}
+                          className="p-1 cursor-pointer hover:bg-gray-100 rounded transition-colors"
+                          aria-label="Valider"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            style={{ color: textColor }}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={handleCancelNewRecurring}
+                          className="p-1 cursor-pointer hover:bg-gray-100 rounded transition-colors"
+                          aria-label="Annuler"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            style={{ color: textColor }}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
                     <ul className="space-y-2">
                       {formData.recurringActivities.map((recurring, index) => {
@@ -271,7 +444,7 @@ export default function ActivityModal({
                             onDragLeave={handleDragLeave}
                             onDrop={(e) => handleDrop(e, index)}
                             onDragEnd={handleDragEnd}
-                            className={`p-2 hover:bg-gray-50 rounded cursor-move ${draggedIndex === index ? 'opacity-50' : ''}`}
+                            className={`p-2 rounded cursor-move flex items-center justify-between ${draggedIndex === index ? 'opacity-50' : ''}`}
                             style={{
                               borderBottom: dragOverIndex === index && draggedIndex !== null && draggedIndex < index ? `2px solid ${textColor}` : 'none',
                               borderTop: dragOverIndex === index && draggedIndex !== null && draggedIndex > index ? `2px solid ${textColor}` : 'none'
@@ -283,7 +456,7 @@ export default function ActivityModal({
                                   onActivityClick(recurring.targetedActivityId)
                                 }
                               }}
-                              className="underline cursor-pointer transition-colors"
+                              className="underline cursor-pointer transition-colors text-left"
                               style={{ 
                                 color: textColor === '#FFFFFF' ? '#93C5FD' : '#2563EB',
                               }}
@@ -295,8 +468,29 @@ export default function ActivityModal({
                               }}
                               disabled={!onActivityClick || !targetActivity}
                             >
-                              {getActivityName(recurring.targetedActivityId)} - {recurring.percent}%
+                              {getActivityName(recurring.targetedActivityId)}
                             </button>
+                            <div className="flex items-center gap-1 ml-2">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={recurring.percent}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value) || 0
+                                  handlePercentChange(index, value)
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                onDragStart={(e) => e.stopPropagation()}
+                                className="w-16 text-right border outline-none focus:ring-2 rounded px-1 py-0.5"
+                                style={{
+                                  '--tw-ring-color': textColor,
+                                  backgroundColor: 'transparent',
+                                  color: textColor
+                                } as React.CSSProperties}
+                              />
+                              <span>%</span>
+                            </div>
                           </li>
                         )
                       })}
