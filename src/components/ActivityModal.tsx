@@ -110,11 +110,11 @@ export default function ActivityModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div 
-        className="rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
         style={{ backgroundColor, color: textColor }}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
+        <div className="flex items-start justify-between mb-2" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
           <div className="flex-1">
             {isEditing ? (
               <input
@@ -122,22 +122,30 @@ export default function ActivityModal({
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Titre de l'activité"
-                className="text-2xl font-bold w-full border-none outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+                className="text-2xl font-bold w-full border outline-none focus:ring-2 px-2 py-1"
+                style={{ 
+                  '--tw-ring-color': textColor,
+                  backgroundColor: 'transparent'
+                } as React.CSSProperties}
               />
             ) : (
-              <h2 className="text-2xl font-bold">{formData.title}</h2>
+              <h2 className="text-2xl font-bold px-4 pt-1">{formData.title}</h2>
             )}
             {isEditing ? (
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Description de l'activité"
-                className="italic w-full mt-2 border-none outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 resize-none opacity-90"
-                style={{ color: textColor, backgroundColor: 'transparent' }}
+                className="italic p-2 cursor-text w-full border outline-none focus:ring-2 rounded resize-none opacity-90"
+                style={{ 
+                  color: textColor, 
+                  backgroundColor: 'transparent',
+                  '--tw-ring-color': textColor 
+                } as React.CSSProperties}
                 rows={3}
               />
             ) : (
-              <p className="italic mt-2 opacity-90">{formData.description}</p>
+              <p className="italic opacity-90 px-4">{formData.description}</p>
             )}
           </div>
           
@@ -145,7 +153,7 @@ export default function ActivityModal({
             {!isEditing && (
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
                 aria-label="Fermer"
               >
                 <svg
@@ -158,6 +166,7 @@ export default function ActivityModal({
                   style={{ color: textColor }}
                 >
                   <path
+                  className='cursor-pointer'
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     d="M6 18L18 6M6 6l12 12"
@@ -174,7 +183,7 @@ export default function ActivityModal({
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
+                    className="h-5 w-5 cursor-pointer"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -195,7 +204,7 @@ export default function ActivityModal({
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
+                    className="h-5 w-5 cursor-pointer transition-transform hover:scale-110"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -203,6 +212,7 @@ export default function ActivityModal({
                     style={{ color: textColor === '#FFFFFF' ? '#FEE2E2' : '#DC2626' }}
                   >
                     <path
+                    className='cursor-pointer'
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
@@ -215,17 +225,17 @@ export default function ActivityModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto">
           {/* Panel collapsable pour recurringActivities */}
-          <div className="border rounded-lg" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)' }}>
+          <div className="border" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)' }}>
             <button
               onClick={() => setIsRecurringOpen(!isRecurringOpen)}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+              className="w-full cursor-pointer flex items-center justify-between  hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className={`h-5 w-5 transition-transform ${isRecurringOpen ? 'rotate-90' : ''}`}
+                  className={`h-5 w-5 cursor-pointer transition-transform ${isRecurringOpen ? 'rotate-90' : ''}`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -234,14 +244,14 @@ export default function ActivityModal({
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
-                <span className="font-medium">
+                <span className="font-medium cursor-pointer">
                   Activités récurrentes ({formData.recurringActivities?.length || 0})
                 </span>
               </div>
             </button>
             
             {isRecurringOpen && (
-              <div className="border-t p-4" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
+              <div className="border-t p-2" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
                 {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
                   <ul className="space-y-2">
                     {formData.recurringActivities.map((recurring, index) => {
@@ -281,8 +291,7 @@ export default function ActivityModal({
         </div>
 
         {/* Footer */}
-        {isEditing && (
-          <div className="flex items-center justify-end gap-4 p-6 border-t" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
+          <div className="flex items-center justify-end gap-4 p-6 border-t" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)', visibility: isEditing ? 'visible' : 'hidden' }}>
             <button
               onClick={handleCancel}
               className="px-4 py-2 rounded-lg transition-colors"
@@ -304,7 +313,7 @@ export default function ActivityModal({
               {isCreateMode ? 'Créer' : 'Modifier'}
             </button>
           </div>
-        )}
+
       </div>
     </div>
   )
