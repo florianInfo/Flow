@@ -24,6 +24,8 @@ export default function ActivityModal({
   const isCreateMode = !activity || !activity.id
   const [isEditing, setIsEditing] = useState(isCreateMode)
   const [isRecurringOpen, setIsRecurringOpen] = useState(false)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   
   const [formData, setFormData] = useState<Activity>({
     id: activity?.id,
@@ -104,6 +106,51 @@ export default function ActivityModal({
     return found?.title || `Activité #${id}`
   }
 
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index)
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null)
+      setDragOverIndex(null)
+      return
+    }
+
+    const newRecurringActivities = [...(formData.recurringActivities || [])]
+    const [draggedItem] = newRecurringActivities.splice(draggedIndex, 1)
+    newRecurringActivities.splice(dropIndex, 0, draggedItem)
+
+    const updatedFormData = {
+      ...formData,
+      recurringActivities: newRecurringActivities,
+    }
+    
+    setFormData(updatedFormData)
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+    
+    // Sauvegarder automatiquement sans fermer la modal
+    onSave(updatedFormData)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null)
+  }
+
   const backgroundColor = getColorHex(formData.color)
   const textColor = getTextColor(backgroundColor)
 
@@ -122,7 +169,7 @@ export default function ActivityModal({
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Titre de l'activité"
-                className="text-2xl font-bold w-full border outline-none focus:ring-2 px-2 py-1"
+                className="text-2xl cursor-text font-bold w-full border outline-none focus:ring-2 px-2 py-1"
                 style={{ 
                   '--tw-ring-color': textColor,
                   backgroundColor: 'transparent'
@@ -174,7 +221,122 @@ export default function ActivityModal({
                 </svg>
               </button>
             )}
-            {!isCreateMode && !isEditing && (
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 flex flex-col m-2">
+          {/* Panel collapsable pour recurringActivities */}
+          <div className="border flex flex-col" style={{ 
+            borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
+            height: '40%',
+            maxHeight: '40vh'
+          }}>
+            <button
+              onClick={() => setIsRecurringOpen(!isRecurringOpen)}
+              className="w-full cursor-pointer flex items-center justify-between hover:bg-gray-50 transition-colors sticky top-0 z-10"
+              style={{ backgroundColor: backgroundColor }}
+            >
+              <div className="flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-5 w-5 cursor-pointer transition-transform ${isRecurringOpen ? 'rotate-90' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  style={{ color: textColor }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+                <span className="font-medium cursor-pointer">
+                  Activités récurrentes ({formData.recurringActivities?.length || 0})
+                </span>
+              </div>
+            </button>
+            
+            {isRecurringOpen && (
+              <div className="border-t flex-1 overflow-y-auto" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
+                <div className="p-2">
+                  {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
+                    <ul className="space-y-2">
+                      {formData.recurringActivities.map((recurring, index) => {
+                        const targetActivity = activities.find(a => a.id === recurring.targetedActivityId)
+                        return (
+                          <li
+                            key={recurring.id || index}
+                            draggable={true}
+                            onDragStart={() => handleDragStart(index)}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, index)}
+                            onDragEnd={handleDragEnd}
+                            className={`p-2 hover:bg-gray-50 rounded cursor-move ${draggedIndex === index ? 'opacity-50' : ''}`}
+                            style={{
+                              borderBottom: dragOverIndex === index && draggedIndex !== null && draggedIndex < index ? `2px solid ${textColor}` : 'none',
+                              borderTop: dragOverIndex === index && draggedIndex !== null && draggedIndex > index ? `2px solid ${textColor}` : 'none'
+                            }}
+                          >
+                            <button
+                              onClick={() => {
+                                if (onActivityClick && targetActivity) {
+                                  onActivityClick(recurring.targetedActivityId)
+                                }
+                              }}
+                              className="underline cursor-pointer transition-colors"
+                              style={{ 
+                                color: textColor === '#FFFFFF' ? '#93C5FD' : '#2563EB',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.color = textColor === '#FFFFFF' ? '#DBEAFE' : '#1D4ED8'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.color = textColor === '#FFFFFF' ? '#93C5FD' : '#2563EB'
+                              }}
+                              disabled={!onActivityClick || !targetActivity}
+                            >
+                              {getActivityName(recurring.targetedActivityId)} - {recurring.percent}%
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="italic text-sm opacity-75">Aucune activité récurrente</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-4 p-6 border-t" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
+          {isEditing ? (
+            <>
+              <button
+                onClick={handleCancel}
+                className="px-4 py-2 rounded-lg transition-colors"
+                style={{ 
+                  backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                  color: textColor  
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 rounded-lg transition-colors"
+                style={{ 
+                  backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
+                  color: textColor
+                }}
+              >
+                {isCreateMode ? 'Créer' : 'Modifier'}
+              </button>
+            </>
+          ) : (
+            !isCreateMode && (
               <>
                 <button
                   onClick={() => setIsEditing(true)}
@@ -212,7 +374,7 @@ export default function ActivityModal({
                     style={{ color: textColor === '#FFFFFF' ? '#FEE2E2' : '#DC2626' }}
                   >
                     <path
-                    className='cursor-pointer'
+                      className='cursor-pointer'
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
@@ -220,99 +382,9 @@ export default function ActivityModal({
                   </svg>
                 </button>
               </>
-            )}
-          </div>
+            )
+          )}
         </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Panel collapsable pour recurringActivities */}
-          <div className="border" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)' }}>
-            <button
-              onClick={() => setIsRecurringOpen(!isRecurringOpen)}
-              className="w-full cursor-pointer flex items-center justify-between  hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className={`h-5 w-5 cursor-pointer transition-transform ${isRecurringOpen ? 'rotate-90' : ''}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  style={{ color: textColor }}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-                <span className="font-medium cursor-pointer">
-                  Activités récurrentes ({formData.recurringActivities?.length || 0})
-                </span>
-              </div>
-            </button>
-            
-            {isRecurringOpen && (
-              <div className="border-t p-2" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
-                {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
-                  <ul className="space-y-2">
-                    {formData.recurringActivities.map((recurring, index) => {
-                      const targetActivity = activities.find(a => a.id === recurring.targetedActivityId)
-                      return (
-                        <li key={recurring.id || index} className="p-2 hover:bg-gray-50 rounded">
-                          <button
-                            onClick={() => {
-                              if (onActivityClick && targetActivity) {
-                                onActivityClick(recurring.targetedActivityId)
-                              }
-                            }}
-                            className="underline cursor-pointer transition-colors"
-                            style={{ 
-                              color: textColor === '#FFFFFF' ? '#93C5FD' : '#2563EB',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.color = textColor === '#FFFFFF' ? '#DBEAFE' : '#1D4ED8'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.color = textColor === '#FFFFFF' ? '#93C5FD' : '#2563EB'
-                            }}
-                            disabled={!onActivityClick || !targetActivity}
-                          >
-                            {getActivityName(recurring.targetedActivityId)} - {recurring.percent}%
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                ) : (
-                  <p className="italic text-sm opacity-75">Aucune activité récurrente</p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-          <div className="flex items-center justify-end gap-4 p-6 border-t" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)', visibility: isEditing ? 'visible' : 'hidden' }}>
-            <button
-              onClick={handleCancel}
-              className="px-4 py-2 rounded-lg transition-colors"
-              style={{ 
-                backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
-                color: textColor  
-              }}
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 rounded-lg transition-colors"
-              style={{ 
-                backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
-                color: textColor
-              }}
-            >
-              {isCreateMode ? 'Créer' : 'Modifier'}
-            </button>
-          </div>
 
       </div>
     </div>
