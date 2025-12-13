@@ -122,3 +122,17 @@ export function getColorCssVar(color: Color): string {
 export function getColorCssValue(color: Color): string {
   return `var(${ColorPalette[color].cssVar})`
 }
+
+/**
+ * Détermine la couleur du texte (noir ou blanc) en fonction de la luminosité du fond
+ * @param hex - La couleur hexadécimale du fond (format: #RRGGBB)
+ * @returns La couleur du texte (#000000 pour fond clair, #FFFFFF pour fond foncé)
+ */
+export function getTextColor(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  // Calcul de la luminosité relative
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return luminance > 0.5 ? '#000000' : '#FFFFFF'
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Activity, RecurringActivity, Color } from '../models/Activity'
-import { getColorHex } from '../utils/colors'
+import { getColorHex, getTextColor } from '../utils/ColorUtils'
 
 interface ActivityModalProps {
   activity: Activity | null | undefined
@@ -34,25 +34,27 @@ export default function ActivityModal({
   })
 
   useEffect(() => {
-    if (activity) {
-      setFormData({
-        id: activity.id,
-        title: activity.title,
-        description: activity.description,
-        color: activity.color,
-        recurringActivities: activity.recurringActivities || [],
-      })
-      setIsEditing(isCreateMode)
-    } else {
-      setFormData({
-        title: '',
-        description: '',
-        color: Color.TEAL_MUTED,
-        recurringActivities: [],
-      })
-      setIsEditing(true)
+    if (isOpen) {
+      if (activity) {
+        setFormData({
+          id: activity.id,
+          title: activity.title,
+          description: activity.description,
+          color: activity.color,
+          recurringActivities: activity.recurringActivities || [],
+        })
+        setIsEditing(isCreateMode)
+      } else {
+        setFormData({
+          title: '',
+          description: '',
+          color: Color.TEAL_MUTED,
+          recurringActivities: [],
+        })
+        setIsEditing(true)
+      }
     }
-  }, [activity, isCreateMode])
+  }, [activity, isCreateMode, isOpen])
 
   if (!isOpen) return null
 
@@ -65,6 +67,31 @@ export default function ActivityModal({
     onClose()
   }
 
+  const handleCancel = () => {
+    if (isCreateMode) {
+      // Vider formData avant de fermer en mode création
+      setFormData({
+        title: '',
+        description: '',
+        color: Color.TEAL_MUTED,
+        recurringActivities: [],
+      })
+      onClose()
+    } else {
+      // Restaurer les données originales et remettre en mode non-édition
+      if (activity) {
+        setFormData({
+          id: activity.id,
+          title: activity.title,
+          description: activity.description,
+          color: activity.color,
+          recurringActivities: activity.recurringActivities || [],
+        })
+      }
+      setIsEditing(false)
+    }
+  }
+
   const handleDelete = () => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette activité ?')) {
       onDelete(activity?.id)
@@ -75,16 +102,6 @@ export default function ActivityModal({
   const getActivityName = (id: number): string => {
     const found = activities.find(a => a.id === id)
     return found?.title || `Activité #${id}`
-  }
-
-  // Déterminer la couleur du texte en fonction de la luminosité du fond
-  const getTextColor = (hex: string): string => {
-    const r = parseInt(hex.slice(1, 3), 16)
-    const g = parseInt(hex.slice(3, 5), 16)
-    const b = parseInt(hex.slice(5, 7), 16)
-    // Calcul de la luminosité relative
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-    return luminance > 0.5 ? '#000000' : '#FFFFFF'
   }
 
   const backgroundColor = getColorHex(formData.color)
@@ -124,12 +141,12 @@ export default function ActivityModal({
             )}
           </div>
           
-          {!isCreateMode && !isEditing && (
-            <div className="flex gap-2 ml-4">
+          <div className="flex items-center gap-2 ml-4">
+            {!isEditing && (
               <button
-                onClick={() => setIsEditing(true)}
+                onClick={onClose}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                aria-label="Modifier"
+                aria-label="Fermer"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -143,33 +160,58 @@ export default function ActivityModal({
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
               </button>
-              <button
-                onClick={handleDelete}
-                className="p-2 hover:bg-red-50 rounded-full transition-colors"
-                aria-label="Supprimer"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  style={{ color: textColor === '#FFFFFF' ? '#FEE2E2' : '#DC2626' }}
+            )}
+            {!isCreateMode && !isEditing && (
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="Modifier"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
-            </div>
-          )}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    style={{ color: textColor }}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="p-2 hover:bg-red-50 rounded-full transition-colors"
+                  aria-label="Supprimer"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    style={{ color: textColor === '#FFFFFF' ? '#FEE2E2' : '#DC2626' }}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Content */}
@@ -239,28 +281,30 @@ export default function ActivityModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-4 p-6 border-t" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg transition-colors"
-            style={{ 
-              backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
-              color: textColor
-            }}
-          >
-            Annuler
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 rounded-lg transition-colors"
-            style={{ 
-              backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
-              color: textColor
-            }}
-          >
-            {isCreateMode ? 'Créer' : 'Modifier'}
-          </button>
-        </div>
+        {isEditing && (
+          <div className="flex items-center justify-end gap-4 p-6 border-t" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 rounded-lg transition-colors"
+              style={{ 
+                backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                color: textColor  
+              }}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 rounded-lg transition-colors"
+              style={{ 
+                backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
+                color: textColor
+              }}
+            >
+              {isCreateMode ? 'Créer' : 'Modifier'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
