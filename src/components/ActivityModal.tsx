@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Activity, RecurringActivity, Color } from '../models/Activity'
 import { getColorHex, getTextColor } from '../utils/ColorUtils'
+import { ActivitySearch } from '../utils/ActivitySearch'
 
 interface ActivityModalProps {
   activity: Activity | null | undefined
@@ -29,6 +30,10 @@ export default function ActivityModal({
   const [isCreatingNewRecurring, setIsCreatingNewRecurring] = useState(false)
   const [newRecurringTitle, setNewRecurringTitle] = useState('')
   const [pendingRecurringTitle, setPendingRecurringTitle] = useState<string | null>(null)
+  const [searchResults, setSearchResults] = useState<Activity[]>([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   
   const [formData, setFormData] = useState<Activity>({
     id: activity?.id,
@@ -88,6 +93,37 @@ export default function ActivityModal({
       }
     }
   }, [activities, pendingRecurringTitle, onSave])
+
+  // Réinitialiser les états de recherche et cacher l'input d'ajout quand la modal se ferme
+  useEffect(() => {
+    if (!isOpen) {
+      setIsCreatingNewRecurring(false)
+      setNewRecurringTitle('')
+      setSearchResults([])
+      setShowDropdown(false)
+    }
+  }, [isOpen])
+
+  // Fermer le dropdown si on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false)
+      }
+    }
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
+    }
+  }, [showDropdown])
 
   if (!isOpen) return null
 
@@ -205,6 +241,47 @@ export default function ActivityModal({
   const handleCreateNewRecurring = () => {
     setIsCreatingNewRecurring(true)
     setNewRecurringTitle('')
+    setSearchResults([])
+    setShowDropdown(false)
+  }
+
+  const handleSearchInputChange = (value: string) => {
+    setNewRecurringTitle(value)
+    
+    if (value.trim().length > 0) {
+      // Filtrer les activités existantes pour exclure l'activité courante
+      const availableActivities = activities.filter(a => a.id !== formData.id)
+      const results = ActivitySearch.search(availableActivities, value)
+      setSearchResults(results)
+      setShowDropdown(results.length > 0)
+    } else {
+      setSearchResults([])
+      setShowDropdown(false)
+    }
+  }
+
+  const handleSelectExistingActivity = (selectedActivity: Activity) => {
+    if (!selectedActivity.id) return
+
+    // Ajouter directement l'activité existante comme recurringActivity
+    const newRecurringActivity: RecurringActivity = {
+      targetedActivityId: selectedActivity.id,
+      percent: 0,
+    }
+
+    const updatedFormData = {
+      ...formData,
+      recurringActivities: [...(formData.recurringActivities || []), newRecurringActivity],
+    }
+
+    setFormData(updatedFormData)
+    setIsCreatingNewRecurring(false)
+    setNewRecurringTitle('')
+    setSearchResults([])
+    setShowDropdown(false)
+
+    // Sauvegarder automatiquement sans fermer la modal
+    onSave(updatedFormData)
   }
 
   const handleValidateNewRecurring = () => {
@@ -214,7 +291,18 @@ export default function ActivityModal({
 
     const title = newRecurringTitle.trim()
 
-    // Créer une nouvelle activité avec juste le titre
+    // Vérifier si une activité existante correspond exactement au titre
+    const exactMatch = activities.find(
+      a => a.id !== formData.id && a.title.toLowerCase() === title.toLowerCase()
+    )
+
+    if (exactMatch && exactMatch.id) {
+      // Utiliser l'activité existante
+      handleSelectExistingActivity(exactMatch)
+      return
+    }
+
+    // Sinon, créer une nouvelle activité avec juste le titre
     const newActivity: Activity = {
       title: title,
       description: '',
@@ -229,11 +317,15 @@ export default function ActivityModal({
     setPendingRecurringTitle(title)
     setIsCreatingNewRecurring(false)
     setNewRecurringTitle('')
+    setSearchResults([])
+    setShowDropdown(false)
   }
 
   const handleCancelNewRecurring = () => {
     setIsCreatingNewRecurring(false)
     setNewRecurringTitle('')
+    setSearchResults([])
+    setShowDropdown(false)
   }
 
   const backgroundColor = getColorHex(formData.color)
@@ -364,71 +456,111 @@ export default function ActivityModal({
               <div className="border-t flex-1 overflow-y-auto" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
                 <div className="p-2">
                   {isCreatingNewRecurring && (
-                    <div className="p-2 rounded flex items-center justify-between mb-2 border" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)' }}>
-                      <input
-                        type="text"
-                        value={newRecurringTitle}
-                        onChange={(e) => setNewRecurringTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleValidateNewRecurring()
-                          } else if (e.key === 'Escape') {
-                            handleCancelNewRecurring()
-                          }
-                        }}
-                        placeholder="Titre de la nouvelle activité"
-                        className="flex-1 border outline-none focus:ring-2 rounded px-2 py-1 mr-2"
-                        style={{
-                          '--tw-ring-color': textColor,
-                          backgroundColor: 'transparent',
-                          color: textColor
-                        } as React.CSSProperties}
-                        autoFocus
-                      />
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={handleValidateNewRecurring}
-                          className="p-1 cursor-pointer hover:bg-gray-100 rounded transition-colors"
-                          aria-label="Valider"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                            style={{ color: textColor }}
+                    <div className="relative mb-2">
+                      <div className="p-2 rounded flex items-center justify-between border" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)' }}>
+                        <input
+                          ref={searchInputRef}
+                          type="text"
+                          value={newRecurringTitle}
+                          onChange={(e) => handleSearchInputChange(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              // Si on appuie sur Enter et qu'il y a des résultats, sélectionner le premier
+                              if (showDropdown && searchResults.length > 0) {
+                                handleSelectExistingActivity(searchResults[0])
+                              } else {
+                                handleValidateNewRecurring()
+                              }
+                            } else if (e.key === 'Escape') {
+                              handleCancelNewRecurring()
+                            }
+                          }}
+                          onFocus={() => {
+                            if (newRecurringTitle.trim().length > 0 && searchResults.length > 0) {
+                              setShowDropdown(true)
+                            }
+                          }}
+                          placeholder="Rechercher ou créer une activité"
+                          className="flex-1 border outline-none focus:ring-2 rounded px-2 py-1 mr-2"
+                          style={{
+                            '--tw-ring-color': textColor,
+                            backgroundColor: 'transparent',
+                            color: textColor
+                          } as React.CSSProperties}
+                          autoFocus
+                        />
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={handleValidateNewRecurring}
+                            className="p-1 cursor-pointer hover:bg-gray-100 rounded transition-colors"
+                            aria-label="Valider"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={handleCancelNewRecurring}
-                          className="p-1 cursor-pointer hover:bg-gray-100 rounded transition-colors"
-                          aria-label="Annuler"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                            style={{ color: textColor }}
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              style={{ color: textColor }}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={handleCancelNewRecurring}
+                            className="p-1 cursor-pointer hover:bg-gray-100 rounded transition-colors"
+                            aria-label="Annuler"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              style={{ color: textColor }}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
+                      {showDropdown && searchResults.length > 0 && (
+                        <div
+                          ref={dropdownRef}
+                          className="absolute z-20 w-full mt-1 border rounded shadow-lg max-h-60 overflow-y-auto"
+                          style={{
+                            backgroundColor: backgroundColor,
+                            borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
+                            color: textColor
+                          }}
+                        >
+                          {searchResults.map((result) => (
+                            <button
+                              key={result.id}
+                              onClick={() => handleSelectExistingActivity(result)}
+                              className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b last:border-b-0"
+                              style={{
+                                borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                              }}
+                            >
+                              <div className="font-medium">{result.title}</div>
+                              {result.description && (
+                                <div className="text-sm opacity-75 truncate">{result.description}</div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                   {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
@@ -496,7 +628,9 @@ export default function ActivityModal({
                       })}
                     </ul>
                   ) : (
-                    <p className="italic text-sm opacity-75">Aucune activité récurrente</p>
+                    !isCreatingNewRecurring && (
+                      <p className="italic text-sm opacity-75">Aucune activité récurrente</p>
+                    )
                   )}
                 </div>
               </div>

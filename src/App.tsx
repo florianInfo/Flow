@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Activity } from './models/Activity'
 import ActivityBadge from './components/ActivityBadge'
 import ActivityModal from './components/ActivityModal'
+import { ActivityDelete } from './utils/ActivityDelete'
 
 interface ActivitiesData {
   activities: Activity[]
@@ -30,7 +31,7 @@ function App() {
 
   const handleDelete = (id: number | undefined) => {
     if (id !== undefined) {
-      setActivities(activities.filter(activity => activity.id !== id))
+      setActivities(ActivityDelete.deleteActivity(activities, id))
     }
   }
 
@@ -51,6 +52,7 @@ function App() {
     } else {
       // Créer une nouvelle activité
       const newId = Math.max(...activities.map(a => a.id || 0), 0) + 1
+      activity.id = newId
       setActivities([...activities, { ...activity, id: newId }])
     }
   }
