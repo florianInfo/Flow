@@ -23,7 +23,10 @@ export default function ActivityModal({
   onActivityClick,
 }: ActivityModalProps) {
   const isCreateMode = !activity || !activity.id
-  const [isEditing, setIsEditing] = useState(isCreateMode)
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [isEditingDescription, setIsEditingDescription] = useState(false)
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
   const [isRecurringOpen, setIsRecurringOpen] = useState(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
@@ -34,6 +37,8 @@ export default function ActivityModal({
   const [showDropdown, setShowDropdown] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const pendingSaveRef = useRef<Activity | null>(null)
+  const [shouldSave, setShouldSave] = useState(false)
   
   const [formData, setFormData] = useState<Activity>({
     id: activity?.id,
@@ -53,7 +58,6 @@ export default function ActivityModal({
           color: activity.color,
           recurringActivities: activity.recurringActivities || [],
         })
-        setIsEditing(isCreateMode)
       } else {
         setFormData({
           title: '',
@@ -61,10 +65,11 @@ export default function ActivityModal({
           color: Color.TEAL_MUTED,
           recurringActivities: [],
         })
-        setIsEditing(true)
       }
+      setIsEditingTitle(false)
+      setIsEditingDescription(false)
     }
-  }, [activity, isCreateMode, isOpen])
+  }, [activity, isOpen])
 
   // Détecter quand une nouvelle activité est créée pour l'ajouter aux recurringActivities
   useEffect(() => {
@@ -77,22 +82,37 @@ export default function ActivityModal({
           percent: 0,
         }
 
+        // Créer les données mises à jour
         setFormData(prevFormData => {
           const updatedFormData = {
             ...prevFormData,
             recurringActivities: [...(prevFormData.recurringActivities || []), newRecurringActivity],
           }
           
-          // Sauvegarder automatiquement sans fermer la modal
-          onSave(updatedFormData)
+          // Stocker dans le ref pour sauvegarde ultérieure
+          pendingSaveRef.current = updatedFormData
           
           return updatedFormData
         })
         
         setPendingRecurringTitle(null)
+        setShouldSave(true)
       }
     }
-  }, [activities, pendingRecurringTitle, onSave])
+  }, [activities, pendingRecurringTitle])
+
+  // Sauvegarder quand il y a des données en attente
+  useEffect(() => {
+    if (shouldSave && pendingSaveRef.current) {
+      const dataToSave = pendingSaveRef.current
+      pendingSaveRef.current = null
+      setShouldSave(false)
+      // Utiliser queueMicrotask pour éviter l'erreur de mise à jour pendant le rendu
+      queueMicrotask(() => {
+        onSave(dataToSave)
+      })
+    }
+  }, [shouldSave, onSave])
 
   // Réinitialiser les états de recherche et cacher l'input d'ajout quand la modal se ferme
   useEffect(() => {
@@ -101,8 +121,23 @@ export default function ActivityModal({
       setNewRecurringTitle('')
       setSearchResults([])
       setShowDropdown(false)
+      setIsEditingTitle(false)
+      setIsEditingDescription(false)
     }
   }, [isOpen])
+
+  // Focus sur l'input quand on passe en mode édition
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus()
+    }
+  }, [isEditingTitle])
+
+  useEffect(() => {
+    if (isEditingDescription && descriptionInputRef.current) {
+      descriptionInputRef.current.focus()
+    }
+  }, [isEditingDescription])
 
   // Fermer le dropdown si on clique en dehors
   useEffect(() => {
@@ -127,38 +162,39 @@ export default function ActivityModal({
 
   if (!isOpen) return null
 
-  const handleSave = () => {
-    if (!formData.title.trim()) {
-      alert('Le titre est requis')
-      return
+  const handleTitleChange = (newTitle: string) => {
+    const updatedFormData = { ...formData, title: newTitle }
+    setFormData(updatedFormData)
+    // Sauvegarder automatiquement
+    if (newTitle.trim() || !isCreateMode) {
+      onSave(updatedFormData)
     }
-    onSave(formData)
-    onClose()
   }
 
-  const handleCancel = () => {
-    if (isCreateMode) {
-      // Vider formData avant de fermer en mode création
-      setFormData({
-        title: '',
-        description: '',
-        color: Color.TEAL_MUTED,
-        recurringActivities: [],
-      })
-      onClose()
-    } else {
-      // Restaurer les données originales et remettre en mode non-édition
-      if (activity) {
-        setFormData({
-          id: activity.id,
-          title: activity.title,
-          description: activity.description,
-          color: activity.color,
-          recurringActivities: activity.recurringActivities || [],
-        })
-      }
-      setIsEditing(false)
+  const handleDescriptionChange = (newDescription: string) => {
+    const updatedFormData = { ...formData, description: newDescription }
+    setFormData(updatedFormData)
+    // Sauvegarder automatiquement
+    onSave(updatedFormData)
+  }
+
+  const handleColorChange = (newColor: Color) => {
+    const updatedFormData = { ...formData, color: newColor }
+    setFormData(updatedFormData)
+    // Sauvegarder automatiquement
+    onSave(updatedFormData)
+  }
+
+  const handleTitleBlur = () => {
+    setIsEditingTitle(false)
+    // Si le titre est vide en mode création, on peut le laisser vide ou mettre un placeholder
+    if (!formData.title.trim() && isCreateMode) {
+      // Optionnel : remettre un titre par défaut ou laisser vide
     }
+  }
+
+  const handleDescriptionBlur = () => {
+    setIsEditingDescription(false)
   }
 
   const handleDelete = () => {
@@ -238,7 +274,23 @@ export default function ActivityModal({
     onSave(updatedFormData)
   }
 
+  const handleDeleteRecurring = (index: number) => {
+    const newRecurringActivities = [...(formData.recurringActivities || [])]
+    newRecurringActivities.splice(index, 1)
+
+    const updatedFormData = {
+      ...formData,
+      recurringActivities: newRecurringActivities,
+    }
+    
+    setFormData(updatedFormData)
+    
+    // Sauvegarder automatiquement sans fermer la modal
+    onSave(updatedFormData)
+  }
+
   const handleCreateNewRecurring = () => {
+    setIsRecurringOpen(true)
     setIsCreatingNewRecurring(true)
     setNewRecurringTitle('')
     setSearchResults([])
@@ -334,17 +386,29 @@ export default function ActivityModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div 
-        className="shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded"
         style={{ backgroundColor, color: textColor }}
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-2" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
           <div className="flex-1">
-            {isEditing ? (
+            {isEditingTitle ? (
               <input
+                ref={titleInputRef}
                 type="text"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                onBlur={handleTitleBlur}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur()
+                  } else if (e.key === 'Escape') {
+                    if (activity) {
+                      setFormData({ ...formData, title: activity.title })
+                    }
+                    setIsEditingTitle(false)
+                  }
+                }}
                 placeholder="Titre de l'activité"
                 className="text-2xl cursor-text font-bold w-full border outline-none focus:ring-2 px-2 py-1"
                 style={{ 
@@ -353,12 +417,27 @@ export default function ActivityModal({
                 } as React.CSSProperties}
               />
             ) : (
-              <h2 className="text-2xl font-bold px-4 pt-1">{formData.title}</h2>
+              <h2 
+                className={`text-2xl font-bold px-4 pt-1 cursor-text ${!formData.title ? 'opacity-50' : ''}`}
+                onClick={() => setIsEditingTitle(true)}
+              >
+                {formData.title || "Titre de l'activité"}
+              </h2>
             )}
-            {isEditing ? (
+            {isEditingDescription ? (
               <textarea
+                ref={descriptionInputRef}
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) => handleDescriptionChange(e.target.value)}
+                onBlur={handleDescriptionBlur}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    if (activity) {
+                      setFormData({ ...formData, description: activity.description })
+                    }
+                    setIsEditingDescription(false)
+                  }
+                }}
                 placeholder="Description de l'activité"
                 className="italic p-2 cursor-text w-full border outline-none focus:ring-2 rounded resize-none opacity-90"
                 style={{ 
@@ -369,43 +448,94 @@ export default function ActivityModal({
                 rows={3}
               />
             ) : (
-              <p className="italic opacity-90 px-4">{formData.description}</p>
+              <p 
+                className={`italic opacity-90 px-4 cursor-text ${!formData.description ? 'opacity-50' : ''}`}
+                onClick={() => setIsEditingDescription(true)}
+              >
+                {formData.description || "Description de l'activité"}
+              </p>
             )}
+            
+            {/* Sélecteur de couleur - toujours visible */}
+            <div className="flex items-center gap-2 px-4 py-2 flex-wrap">
+              {Object.values(Color).map((color) => {
+                const colorHex = getColorHex(color)
+                const isSelected = formData.color === color
+                return (
+                  <button
+                    key={color}
+                    onClick={() => handleColorChange(color)}
+                    className={`w-8 h-8 rounded transition-all ${
+                      isSelected ? 'ring-2 ring-offset-2 scale-110' : 'hover:scale-105'
+                    }`}
+                    style={{
+                      backgroundColor: colorHex,
+                      '--tw-ring-color': textColor,
+                      '--tw-ring-offset-color': backgroundColor,
+                    } as React.CSSProperties}
+                    aria-label={`Sélectionner la couleur ${color}`}
+                    title={color}
+                  />
+                )
+              })}
+            </div>
           </div>
           
           <div className="flex items-center gap-2 ml-4">
-            {!isEditing && (
+            {!isCreateMode && (
               <button
-                onClick={onClose}
-                className="p-2 cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
-                aria-label="Fermer"
+                onClick={handleDelete}
+                className="p-2 hover:bg-red-50 rounded-full transition-colors"
+                aria-label="Supprimer"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
+                  className="h-5 w-5 cursor-pointer transition-transform hover:scale-110"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                   strokeWidth={2}
-                  style={{ color: textColor }}
+                  style={{ color: textColor === '#FFFFFF' ? '#FEE2E2' : '#DC2626' }}
                 >
                   <path
-                  className='cursor-pointer'
+                    className='cursor-pointer'
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                   />
                 </svg>
               </button>
             )}
+            <button
+              onClick={onClose}
+              className="p-2 cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
+              aria-label="Fermer"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+                style={{ color: textColor }}
+              >
+                <path
+                  className='cursor-pointer'
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
           </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 flex flex-col m-2">
           {/* Panel collapsable pour recurringActivities */}
-          <div className="border flex flex-col" style={{ 
-            borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
+          <div className="border-2 flex flex-col rounded" style={{ 
+            borderColor: textColor === '#FFFFFF' ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)',
             height: '40%',
             maxHeight: '40vh'
           }}>
@@ -453,7 +583,7 @@ export default function ActivityModal({
             </div>
             
             {isRecurringOpen && (
-              <div className="border-t flex-1 overflow-y-auto" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
+              <div className="min-h-40 border-t flex-1 overflow-y-auto" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
                 <div className="p-2">
                   {isCreatingNewRecurring && (
                     <div className="relative mb-2">
@@ -622,6 +752,32 @@ export default function ActivityModal({
                                 } as React.CSSProperties}
                               />
                               <span>%</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteRecurring(index)
+                                }}
+                                onDragStart={(e) => e.stopPropagation()}
+                                className="p-1 cursor-pointer hover:bg-gray-100 rounded transition-colors ml-1"
+                                aria-label="Supprimer cette activité récurrente"
+                                title="Supprimer"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 w-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2}
+                                  style={{ color: textColor }}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
+                              </button>
                             </div>
                           </li>
                         )
@@ -638,81 +794,8 @@ export default function ActivityModal({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-4 p-6 border-t" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
-          {isEditing ? (
-            <>
-              <button
-                onClick={handleCancel}
-                className="px-4 py-2 rounded-lg transition-colors"
-                style={{ 
-                  backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
-                  color: textColor  
-                }}
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 rounded-lg transition-colors"
-                style={{ 
-                  backgroundColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
-                  color: textColor
-                }}
-              >
-                {isCreateMode ? 'Créer' : 'Modifier'}
-              </button>
-            </>
-          ) : (
-            !isCreateMode && (
-              <>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  aria-label="Modifier"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 cursor-pointer"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    style={{ color: textColor }}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                    />
-                  </svg>
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="p-2 hover:bg-red-50 rounded-full transition-colors"
-                  aria-label="Supprimer"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 cursor-pointer transition-transform hover:scale-110"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    style={{ color: textColor === '#FFFFFF' ? '#FEE2E2' : '#DC2626' }}
-                  >
-                    <path
-                      className='cursor-pointer'
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
-              </>
-            )
-          )}
-        </div>
+        {/* Footer - petit espace */}
+        <div className="p-4"></div>
 
       </div>
     </div>
