@@ -1,18 +1,30 @@
 import { useState, useEffect } from 'react'
 import { Activity } from './models/Activity'
+import { ScheduledActivity, PlannedActivity, User } from './models/Planning'
 import ActivityBadge from './components/ActivityBadge'
 import ActivityModal from './components/ActivityModal'
+import Planner from './components/Planner'
 import { ActivityDelete } from './utils/ActivityDelete'
 
 interface ActivitiesData {
   activities: Activity[]
 }
 
+type ViewMode = 'activities' | 'planner'
+
 function App() {
-  const [activities, setActivities] = useState<Activity[]>([])
+  const [viewMode, setViewMode] = useState<ViewMode>('activities')
+  const [user, setUser] = useState<User>({
+    id: 1,
+    activities: [],
+    templates: [],
+    calendars: [{ id: 1, name: 'Calendrier principal', plannedActivities: [] }],
+  })
   const [loading, setLoading] = useState(true)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [currentWeek, setCurrentWeek] = useState<Date>(new Date())
+  const [currentCalendarId] = useState<number>(1)
 
   useEffect(() => {
     fetch('/activity-example.json')
@@ -20,7 +32,10 @@ function App() {
       .then((data: ActivitiesData) => {
         // Mélanger les activités pour un effet random
         const shuffled = [...data.activities].sort(() => Math.random() - 0.5)
-        setActivities(shuffled)
+        setUser(prev => ({
+          ...prev,
+          activities: shuffled,
+        }))
         setLoading(false)
       })
       .catch(error => {
@@ -31,7 +46,10 @@ function App() {
 
   const handleDelete = (id: number | undefined) => {
     if (id !== undefined) {
-      setActivities(ActivityDelete.deleteActivity(activities, id))
+      setUser(prev => ({
+        ...prev,
+        activities: ActivityDelete.deleteActivity(prev.activities, id),
+      }))
     }
   }
 
@@ -48,12 +66,18 @@ function App() {
   const handleSaveActivity = (activity: Activity) => {
     if (activity.id) {
       // Modifier une activité existante
-      setActivities(activities.map(a => a.id === activity.id ? activity : a))
+      setUser(prev => ({
+        ...prev,
+        activities: prev.activities.map(a => a.id === activity.id ? activity : a),
+      }))
     } else {
       // Créer une nouvelle activité
-      const newId = Math.max(...activities.map(a => a.id || 0), 0) + 1
+      const newId = Math.max(...user.activities.map(a => a.id || 0), 0) + 1
       activity.id = newId
-      setActivities([...activities, { ...activity, id: newId }])
+      setUser(prev => ({
+        ...prev,
+        activities: [...prev.activities, { ...activity, id: newId }],
+      }))
     }
   }
 
@@ -62,11 +86,226 @@ function App() {
   }
 
   const handleActivityClickInModal = (activityId: number) => {
-    const clickedActivity = activities.find(a => a.id === activityId)
+    const clickedActivity = user.activities.find(a => a.id === activityId)
     if (clickedActivity) {
       setSelectedActivity(clickedActivity)
       // Le modal reste ouvert, mais avec la nouvelle activité
     }
+  }
+
+  // Fonction de log centralisée qui construit et affiche le payload PATCH
+  const logPlannerUpdate = (operation: string, params: any) => {
+    let patchPayload: any = {}
+    
+    switch (operation) {
+      case 'onScheduledActivityCreate': {
+        const scheduled = params.scheduled as ScheduledActivity
+        const template = user.templates.find(t => t.id === 1)
+        
+        if (template) {
+          // PATCH pour mettre à jour un template existant
+          patchPayload = {
+            method: 'PATCH',
+            url: `/api/users/${user.id}/templates/${template.id}`,
+            body: {
+              scheduledActivities: [
+                ...template.scheduledActivities,
+                scheduled
+              ]
+            }
+          }
+        } else {
+          // POST pour créer un nouveau template
+          patchPayload = {
+            method: 'POST',
+            url: `/api/users/${user.id}/templates`,
+            body: {
+              userId: user.id,
+              scheduledActivities: [scheduled]
+            }
+          }
+        }
+        break
+      }
+      
+      case 'onScheduledActivityUpdate': {
+        const scheduled = params.scheduled as ScheduledActivity
+        const template = user.templates.find(t => 
+          t.scheduledActivities.some(s => s.id === scheduled.id)
+        )
+        
+        if (template) {
+          patchPayload = {
+            method: 'PATCH',
+            url: `/api/users/${user.id}/templates/${template.id}/scheduled-activities/${scheduled.id}`,
+            body: {
+              activityId: scheduled.activityId,
+              startTime: scheduled.startTime,
+              endTime: scheduled.endTime,
+              dayOfWeek: scheduled.dayOfWeek,
+              periodicity: scheduled.periodicity
+            }
+          }
+        }
+        break
+      }
+      
+      case 'onPlannedActivityCreate': {
+        const planned = params.planned as PlannedActivity
+        const calendar = user.calendars.find(c => c.id === currentCalendarId)
+        
+        if (calendar) {
+          patchPayload = {
+            method: 'PATCH',
+            url: `/api/users/${user.id}/calendars/${calendar.id}`,
+            body: {
+              plannedActivities: [
+                ...calendar.plannedActivities,
+                planned
+              ]
+            }
+          }
+        }
+        break
+      }
+      
+      case 'onPlannedActivityUpdate': {
+        const planned = params.planned as PlannedActivity
+        const calendar = user.calendars.find(c => 
+          c.plannedActivities.some(p => p.id === planned.id)
+        )
+        
+        if (calendar) {
+          patchPayload = {
+            method: 'PATCH',
+            url: `/api/users/${user.id}/calendars/${calendar.id}/planned-activities/${planned.id}`,
+            body: {
+              activityId: planned.activityId,
+              date: planned.date,
+              startTime: planned.startTime,
+              endTime: planned.endTime,
+              scheduledActivityId: planned.scheduledActivityId
+            }
+          }
+        }
+        break
+      }
+      
+      case 'onWeekChange': {
+        patchPayload = {
+          method: 'GET',
+          url: `/api/users/${user.id}/calendars/${currentCalendarId}/planned-activities`,
+          queryParams: {
+            weekStart: params.weekStart.toISOString().split('T')[0]
+          }
+        }
+        break
+      }
+      
+      default:
+        patchPayload = {
+          operation,
+          params
+        }
+    }
+    
+    console.log('=== PLANNER UPDATE ===')
+    console.log('Opération:', operation)
+    console.log('Payload PATCH:', JSON.stringify(patchPayload, null, 2))
+    console.log('=====================')
+  }
+
+  // Handlers pour le Planner
+  const handleScheduledActivityCreate = (scheduled: ScheduledActivity) => {
+    // Générer un nouvel ID pour la ScheduledActivity
+    const allScheduledIds = user.templates.flatMap(t => t.scheduledActivities.map(s => s.id || 0))
+    const newId = allScheduledIds.length > 0 ? Math.max(...allScheduledIds) + 1 : 1
+    const newScheduled = { ...scheduled, id: newId }
+    
+    setUser(prev => {
+      // Trouver ou créer le template principal (id: 1)
+      const templateId = 1
+      const existingTemplate = prev.templates.find(t => t.id === templateId)
+      
+      if (existingTemplate) {
+        // Mettre à jour le template existant
+        const updatedTemplate = {
+          ...existingTemplate,
+          scheduledActivities: [...existingTemplate.scheduledActivities, newScheduled],
+        }
+        
+        return {
+          ...prev,
+          templates: prev.templates.map(t => t.id === templateId ? updatedTemplate : t),
+        }
+      } else {
+        // Créer un nouveau template
+        const newTemplate = {
+          id: templateId,
+          userId: prev.id!,
+          scheduledActivities: [newScheduled],
+        }
+        
+        return {
+          ...prev,
+          templates: [...prev.templates, newTemplate],
+        }
+      }
+    })
+    
+    logPlannerUpdate('onScheduledActivityCreate', { scheduled: newScheduled })
+  }
+
+  const handleScheduledActivityUpdate = (scheduled: ScheduledActivity) => {
+    setUser(prev => ({
+      ...prev,
+      templates: prev.templates.map(template => ({
+        ...template,
+        scheduledActivities: template.scheduledActivities.map(s => 
+          s.id === scheduled.id ? scheduled : s
+        ),
+      })),
+    }))
+    
+    logPlannerUpdate('onScheduledActivityUpdate', { scheduled })
+  }
+
+  const handlePlannedActivityCreate = (planned: PlannedActivity) => {
+    const currentCalendar = user.calendars.find(c => c.id === currentCalendarId)
+    if (!currentCalendar) return
+    
+    const newId = Math.max(...currentCalendar.plannedActivities.map(p => p.id || 0), 0) + 1
+    const newPlanned = { ...planned, id: newId }
+    
+    setUser(prev => ({
+      ...prev,
+      calendars: prev.calendars.map(cal => 
+        cal.id === currentCalendarId
+          ? { ...cal, plannedActivities: [...cal.plannedActivities, newPlanned] }
+          : cal
+      ),
+    }))
+    
+    logPlannerUpdate('onPlannedActivityCreate', { planned: newPlanned })
+  }
+
+  const handlePlannedActivityUpdate = (planned: PlannedActivity) => {
+    setUser(prev => ({
+      ...prev,
+      calendars: prev.calendars.map(cal => ({
+        ...cal,
+        plannedActivities: cal.plannedActivities.map(p => 
+          p.id === planned.id ? planned : p
+        ),
+      })),
+    }))
+    
+    logPlannerUpdate('onPlannedActivityUpdate', { planned })
+  }
+
+  const handleWeekChange = (weekStart: Date) => {
+    setCurrentWeek(weekStart)
+    logPlannerUpdate('onWeekChange', { weekStart })
   }
 
   // Générer des transformations aléatoires pour chaque badge
@@ -89,49 +328,89 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 select-none">
-      <header className="w-full px-4 py-1" style={{ backgroundColor: '#ece3d0' }}>
-        <div className="flex items-center">
+    <div className="min-h-screen bg-gray-50 select-none flex flex-col">
+      <header className="w-full px-4 py-1 flex-shrink-0" style={{ backgroundColor: '#ece3d0' }}>
+        <div className="flex items-center justify-between">
           <img 
             src="/logo.png" 
             alt="Logo" 
             className="h-20 w-auto"
-            onError={(e) => {
+            onError={() => {
               // Fallback si l'image n'existe pas encore
               console.warn('Logo image not found at /logo.png')
             }}
           />
+          
+          {/* Navigation entre les vues */}
+          <nav className="flex gap-2">
+            <button
+              onClick={() => setViewMode('activities')}
+              className={`px-4 py-2 rounded transition-colors ${
+                viewMode === 'activities'
+                  ? 'bg-gray-700 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Activités
+            </button>
+            <button
+              onClick={() => setViewMode('planner')}
+              className={`px-4 py-2 rounded transition-colors ${
+                viewMode === 'planner'
+                  ? 'bg-gray-700 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Planner
+            </button>
+          </nav>
         </div>
       </header>
 
-      <main className="flex items-center justify-center min-h-[calc(100vh-200px)] px-4 py-8 select-none">
-        <div className="flex flex-wrap justify-center items-center gap-4 max-w-6xl select-none">
-          {activities.map((activity, index) => (
-            <div
-              key={activity.id || index}
-              style={getRandomTransform()}
-              className="cursor-pointer hover:scale-110 transition-transform duration-300"
-              onClick={() => handleActivityClick(activity)}
-            >
-              <ActivityBadge
-                activity={activity}
-                onDelete={handleDelete}
-              />
-            </div>
-          ))}
-        </div>
-        
-        <button
-          onClick={handleCreateActivity}
-          className="fixed bottom-8 right-8 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors cursor-pointer"
-        >
-          + Créer une activité
-        </button>
-      </main>
+      {viewMode === 'activities' ? (
+        <main className="flex items-center justify-center min-h-[calc(100vh-200px)] px-4 py-8 select-none flex-1">
+          <div className="flex flex-wrap justify-center items-center gap-4 max-w-6xl select-none">
+            {user.activities.map((activity, index) => (
+              <div
+                key={activity.id || index}
+                style={getRandomTransform()}
+                className="cursor-pointer hover:scale-110 transition-transform duration-300"
+                onClick={() => handleActivityClick(activity)}
+              >
+                <ActivityBadge
+                  activity={activity}
+                  onDelete={handleDelete}
+                />
+              </div>
+            ))}
+          </div>
+          
+          <button
+            onClick={handleCreateActivity}
+            className="fixed bottom-8 right-8 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors cursor-pointer"
+          >
+            + Créer une activité
+          </button>
+        </main>
+      ) : (
+        <main className="flex-1 overflow-hidden">
+          <Planner
+            activities={user.activities}
+            scheduledActivities={user.templates.flatMap(t => t.scheduledActivities)}
+            plannedActivities={user.calendars.find(c => c.id === currentCalendarId)?.plannedActivities || []}
+            onScheduledActivityCreate={handleScheduledActivityCreate}
+            onScheduledActivityUpdate={handleScheduledActivityUpdate}
+            onPlannedActivityCreate={handlePlannedActivityCreate}
+            onPlannedActivityUpdate={handlePlannedActivityUpdate}
+            currentWeek={currentWeek}
+            onWeekChange={handleWeekChange}
+          />
+        </main>
+      )}
 
       <ActivityModal
         activity={selectedActivity}
-        activities={activities}
+        activities={user.activities}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveActivity}
