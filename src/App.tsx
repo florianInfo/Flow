@@ -90,8 +90,18 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 select-none">
-      <header className="text-center py-8">
-        <h1 className="text-4xl font-bold text-gray-800 select-none">Flow</h1>
+      <header className="w-full px-4 py-1" style={{ backgroundColor: '#ece3d0' }}>
+        <div className="flex items-center">
+          <img 
+            src="/logo.png" 
+            alt="Logo" 
+            className="h-20 w-auto"
+            onError={(e) => {
+              // Fallback si l'image n'existe pas encore
+              console.warn('Logo image not found at /logo.png')
+            }}
+          />
+        </div>
       </header>
 
       <main className="flex items-center justify-center min-h-[calc(100vh-200px)] px-4 py-8 select-none">
