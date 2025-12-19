@@ -5,6 +5,7 @@ import ActivityBadge from './components/ActivityBadge'
 import ActivityModal from './components/ActivityModal'
 import Planner from './components/Planner'
 import { ActivityDelete } from './utils/ActivityDelete'
+import { logApiRequest } from './utils/ApiLogger'
 
 interface ActivitiesData {
   activities: Activity[]
@@ -93,10 +94,8 @@ function App() {
     }
   }
 
-  // Fonction de log centralisée qui construit et affiche le payload PATCH
+  // Fonction de log centralisée qui construit et affiche le payload API
   const logPlannerUpdate = (operation: string, params: any) => {
-    let patchPayload: any = {}
-    
     switch (operation) {
       case 'onScheduledActivityCreate': {
         const scheduled = params.scheduled as ScheduledActivity
@@ -104,26 +103,28 @@ function App() {
         
         if (template) {
           // PATCH pour mettre à jour un template existant
-          patchPayload = {
+          logApiRequest({
             method: 'PATCH',
-            url: `/api/users/${user.id}/templates/${template.id}`,
+            path: '/api/users/:userId/templates/:templateId',
+            pathParams: { userId: user.id!, templateId: template.id! },
             body: {
               scheduledActivities: [
                 ...template.scheduledActivities,
                 scheduled
               ]
             }
-          }
+          })
         } else {
           // POST pour créer un nouveau template
-          patchPayload = {
+          logApiRequest({
             method: 'POST',
-            url: `/api/users/${user.id}/templates`,
+            path: '/api/users/:userId/templates',
+            pathParams: { userId: user.id! },
             body: {
               userId: user.id,
               scheduledActivities: [scheduled]
             }
-          }
+          })
         }
         break
       }
@@ -134,10 +135,15 @@ function App() {
           t.scheduledActivities.some(s => s.id === scheduled.id)
         )
         
-        if (template) {
-          patchPayload = {
+        if (template && scheduled.id) {
+          logApiRequest({
             method: 'PATCH',
-            url: `/api/users/${user.id}/templates/${template.id}/scheduled-activities/${scheduled.id}`,
+            path: '/api/users/:userId/templates/:templateId/scheduled-activities/:scheduledActivityId',
+            pathParams: { 
+              userId: user.id!, 
+              templateId: template.id!,
+              scheduledActivityId: scheduled.id
+            },
             body: {
               activityId: scheduled.activityId,
               startTime: scheduled.startTime,
@@ -145,7 +151,7 @@ function App() {
               dayOfWeek: scheduled.dayOfWeek,
               periodicity: scheduled.periodicity
             }
-          }
+          })
         }
         break
       }
@@ -155,16 +161,17 @@ function App() {
         const calendar = user.calendars.find(c => c.id === currentCalendarId)
         
         if (calendar) {
-          patchPayload = {
+          logApiRequest({
             method: 'PATCH',
-            url: `/api/users/${user.id}/calendars/${calendar.id}`,
+            path: '/api/users/:userId/calendars/:calendarId',
+            pathParams: { userId: user.id!, calendarId: calendar.id! },
             body: {
               plannedActivities: [
                 ...calendar.plannedActivities,
                 planned
               ]
             }
-          }
+          })
         }
         break
       }
@@ -175,10 +182,15 @@ function App() {
           c.plannedActivities.some(p => p.id === planned.id)
         )
         
-        if (calendar) {
-          patchPayload = {
+        if (calendar && planned.id) {
+          logApiRequest({
             method: 'PATCH',
-            url: `/api/users/${user.id}/calendars/${calendar.id}/planned-activities/${planned.id}`,
+            path: '/api/users/:userId/calendars/:calendarId/planned-activities/:plannedActivityId',
+            pathParams: { 
+              userId: user.id!, 
+              calendarId: calendar.id!,
+              plannedActivityId: planned.id
+            },
             body: {
               activityId: planned.activityId,
               date: planned.date,
@@ -186,33 +198,29 @@ function App() {
               endTime: planned.endTime,
               scheduledActivityId: planned.scheduledActivityId
             }
-          }
+          })
         }
         break
       }
       
       case 'onWeekChange': {
-        patchPayload = {
+        logApiRequest({
           method: 'GET',
-          url: `/api/users/${user.id}/calendars/${currentCalendarId}/planned-activities`,
+          path: '/api/users/:userId/calendars/:calendarId/planned-activities',
+          pathParams: { userId: user.id!, calendarId: currentCalendarId },
           queryParams: {
             weekStart: params.weekStart.toISOString().split('T')[0]
           }
-        }
+        })
         break
       }
       
       default:
-        patchPayload = {
-          operation,
-          params
-        }
+        console.log('=== PLANNER UPDATE ===')
+        console.log('Opération:', operation)
+        console.log('Paramètres:', params)
+        console.log('=====================')
     }
-    
-    console.log('=== PLANNER UPDATE ===')
-    console.log('Opération:', operation)
-    console.log('Payload PATCH:', JSON.stringify(patchPayload, null, 2))
-    console.log('=====================')
   }
 
   // Handlers pour le Planner
@@ -302,6 +310,7 @@ function App() {
     
     logPlannerUpdate('onPlannedActivityUpdate', { planned })
   }
+
 
   const handleWeekChange = (weekStart: Date) => {
     setCurrentWeek(weekStart)
@@ -404,6 +413,13 @@ function App() {
             onPlannedActivityUpdate={handlePlannedActivityUpdate}
             currentWeek={currentWeek}
             onWeekChange={handleWeekChange}
+            onActivityDoubleClick={(activityId) => {
+              const activity = user.activities.find(a => a.id === activityId)
+              if (activity) {
+                setSelectedActivity(activity)
+                setIsModalOpen(true)
+              }
+            }}
           />
         </main>
       )}
