@@ -20,6 +20,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i)
 const DAYS_OF_WEEK = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 const SLOT_HEIGHT = 60 // Hauteur d'un slot d'une heure en pixels
 const SLOT_MINUTES = 15 // Granularité des slots (15 minutes)
+const DEFAULT_ACTIVITY_DURATION = 30 // minutes
 
 export default function Planner({
   activities,
@@ -32,10 +33,10 @@ export default function Planner({
   onWeekChange,
   onActivityDoubleClick,
 }: PlannerProps) {
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState<{ day: number; hour: number; minute: number } | null>(null)
-  const [dragEnd, setDragEnd] = useState<{ day: number; hour: number; minute: number } | null>(null)
+  const [draggedActivity, setDraggedActivity] = useState<Activity | null>(null) // Activité draguée depuis la liste
+  const [draggedPlannedActivity, setDraggedPlannedActivity] = useState<PlannedActivity | null>(null) // Activité planifiée draguée
+  const [draggedScheduledActivity, setDraggedScheduledActivity] = useState<ScheduledActivity | null>(null) // Activité scheduled draguée
+  const [hoveredSlot, setHoveredSlot] = useState<{ day: Date; hour: number; minute: number } | null>(null)
   const [selectedPlannedActivity, setSelectedPlannedActivity] = useState<PlannedActivity | null>(null)
   const [selectedScheduledActivity, setSelectedScheduledActivity] = useState<ScheduledActivity | null>(null)
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null)
@@ -73,81 +74,169 @@ export default function Planner({
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
   }
 
-  // Gérer le clic sur un slot
-  const handleSlotClick = (day: Date, hour: number, minute: number) => {
-    // Désélectionner les activités si on clique sur un slot vide
-    setSelectedPlannedActivity(null)
+  // Gérer le drag depuis la liste d'activités
+  const handleActivityDragStart = (e: React.DragEvent, activity: Activity) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('activity', JSON.stringify(activity))
+    setDraggedActivity(activity)
+  }
+
+  // Gérer le drag d'une activité planifiée existante
+  const handlePlannedActivityDragStart = (e: React.DragEvent, planned: PlannedActivity) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('plannedActivity', JSON.stringify(planned))
+    setDraggedPlannedActivity(planned)
+    setSelectedPlannedActivity(planned)
     setSelectedScheduledActivity(null)
-    
-    if (!selectedActivity) return
+  }
+
+  // Gérer le drag d'une activité scheduled existante
+  const handleScheduledActivityDragStart = (e: React.DragEvent, scheduled: ScheduledActivity) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('scheduledActivity', JSON.stringify(scheduled))
+    setDraggedScheduledActivity(scheduled)
+    setSelectedScheduledActivity(scheduled)
+    setSelectedPlannedActivity(null)
+  }
+
+  // Gérer le drop sur un slot
+  const handleDrop = (e: React.DragEvent, day: Date, hour: number, minute: number) => {
+    e.preventDefault()
+    e.stopPropagation()
 
     const dayOfWeek = day.getDay()
     const startTime = minutesToTime(hour * 60 + minute)
-    const endTime = minutesToTime(hour * 60 + minute + 60) // Par défaut 1 heure
 
-    const newScheduled: ScheduledActivity = {
-      activityId: selectedActivity.id!,
-      startTime,
-      endTime,
-      dayOfWeek,
-    }
-
-    onScheduledActivityCreate?.(newScheduled)
-    setSelectedActivity(null)
-  }
-
-  // Gérer le début du drag
-  const handleMouseDown = (day: Date, hour: number, minute: number) => {
-    if (!selectedActivity) return
-
-    const dayOfWeek = day.getDay()
-    setIsDragging(true)
-    setDragStart({ day: dayOfWeek, hour, minute })
-    setDragEnd({ day: dayOfWeek, hour, minute })
-  }
-
-  // Gérer le mouvement de la souris pendant le drag
-  const handleMouseMove = (day: Date, hour: number, minute: number) => {
-    if (!isDragging || !dragStart) return
-
-    const dayOfWeek = day.getDay()
-    setDragEnd({ day: dayOfWeek, hour, minute })
-  }
-
-  // Gérer la fin du drag
-  const handleMouseUp = () => {
-    if (!isDragging || !dragStart || !dragEnd || !selectedActivity) {
-      setIsDragging(false)
-      setDragStart(null)
-      setDragEnd(null)
+    // Vérifier si on drag une activité depuis la liste
+    const activityData = e.dataTransfer.getData('activity')
+    if (activityData) {
+      const activity: Activity = JSON.parse(activityData)
+      const endTime = minutesToTime(hour * 60 + minute + DEFAULT_ACTIVITY_DURATION) // Par défaut 15 minutes
+      const newScheduled: ScheduledActivity = {
+        activityId: activity.id!,
+        startTime,
+        endTime,
+        dayOfWeek,
+      }
+      onScheduledActivityCreate?.(newScheduled)
+      setDraggedActivity(null)
+      setHoveredSlot(null)
       return
     }
 
-    const startMinutes = dragStart.hour * 60 + dragStart.minute
-    const endMinutes = dragEnd.hour * 60 + dragEnd.minute
-    const finalStart = Math.min(startMinutes, endMinutes)
-    const finalEnd = Math.max(startMinutes, endMinutes)
-
-    if (finalEnd - finalStart < 15) {
-      // Minimum 15 minutes
-      setIsDragging(false)
-      setDragStart(null)
-      setDragEnd(null)
+    // Vérifier si on drag une PlannedActivity existante
+    const plannedData = e.dataTransfer.getData('plannedActivity')
+    if (plannedData) {
+      const planned: PlannedActivity = JSON.parse(plannedData)
+      const dateStr = day.toISOString().split('T')[0]
+      // Préserver la durée de l'activité existante
+      const start = timeToMinutes(planned.startTime)
+      const end = timeToMinutes(planned.endTime)
+      const duration = end - start
+      const endTime = minutesToTime(hour * 60 + minute + duration)
+      
+      const updated: PlannedActivity = {
+        ...planned,
+        date: dateStr,
+        startTime,
+        endTime,
+      }
+      onPlannedActivityUpdate?.(updated)
+      setDraggedPlannedActivity(null)
+      setHoveredSlot(null)
       return
     }
 
-    const newScheduled: ScheduledActivity = {
-      activityId: selectedActivity.id!,
-      startTime: minutesToTime(finalStart),
-      endTime: minutesToTime(finalEnd),
-      dayOfWeek: dragStart.day,
+    // Vérifier si on drag une ScheduledActivity existante
+    const scheduledData = e.dataTransfer.getData('scheduledActivity')
+    if (scheduledData) {
+      const scheduled: ScheduledActivity = JSON.parse(scheduledData)
+      // Préserver la durée de l'activité existante
+      const start = timeToMinutes(scheduled.startTime)
+      const end = timeToMinutes(scheduled.endTime)
+      const duration = end - start
+      const endTime = minutesToTime(hour * 60 + minute + duration)
+      
+      const updated: ScheduledActivity = {
+        ...scheduled,
+        startTime,
+        endTime,
+        dayOfWeek,
+      }
+      onScheduledActivityUpdate?.(updated)
+      setDraggedScheduledActivity(null)
+      setHoveredSlot(null)
+      return
     }
+  }
 
-    onScheduledActivityCreate?.(newScheduled)
-    setSelectedActivity(null)
-    setIsDragging(false)
-    setDragStart(null)
-    setDragEnd(null)
+  // Gérer le drag over pour le hover
+  const handleDragOver = (e: React.DragEvent, day: Date, hour: number, minute: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setHoveredSlot({ day, hour, minute })
+  }
+
+  // Calculer le slot à partir des coordonnées de la souris
+  const getSlotFromMousePosition = (e: React.DragEvent, day: Date): { hour: number; minute: number } | null => {
+    if (!plannerRef.current) return null
+    
+    const rect = plannerRef.current.getBoundingClientRect()
+    const headerHeight = 48
+    const relativeY = e.clientY - rect.top - headerHeight
+    
+    if (relativeY < 0) return null
+    
+    const totalMinutes = (relativeY / SLOT_HEIGHT) * 60
+    const hour = Math.floor(totalMinutes / 60)
+    const minute = Math.floor((totalMinutes % 60) / SLOT_MINUTES) * SLOT_MINUTES
+    
+    if (hour < 0 || hour >= 24) return null
+    
+    return { hour, minute }
+  }
+
+  // Gérer le drag over sur une activité
+  const handleActivityDragOver = (e: React.DragEvent, day: Date, activityId?: number) => {
+    // Ne pas gérer si on survole l'activité qu'on est en train de draguer
+    if (draggedPlannedActivity && draggedPlannedActivity.id === activityId) {
+      return
+    }
+    if (draggedScheduledActivity && draggedScheduledActivity.id === activityId) {
+      return
+    }
+    
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const slot = getSlotFromMousePosition(e, day)
+    if (slot) {
+      setHoveredSlot({ day, hour: slot.hour, minute: slot.minute })
+    }
+  }
+
+  // Gérer le drop sur une activité
+  const handleActivityDrop = (e: React.DragEvent, day: Date, activityId?: number) => {
+    // Ne pas gérer si on survole l'activité qu'on est en train de draguer
+    if (draggedPlannedActivity && draggedPlannedActivity.id === activityId) {
+      return
+    }
+    if (draggedScheduledActivity && draggedScheduledActivity.id === activityId) {
+      return
+    }
+    
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const slot = getSlotFromMousePosition(e, day)
+    if (slot) {
+      handleDrop(e, day, slot.hour, slot.minute)
+    }
+  }
+
+  // Gérer le drag leave
+  const handleDragLeave = () => {
+    setHoveredSlot(null)
   }
 
   // Détecter les chevauchements et calculer la position/largeur des activités
@@ -250,26 +339,50 @@ export default function Planner({
       marginLeft: position.left > 0 ? '2px' : '0',
       marginRight: position.left + position.width < 100 ? '2px' : '0',
       boxSizing: 'border-box',
-      borderWidth: isSelected ? '3px' : '0',
-      borderStyle: isSelected ? 'dashed' : 'none',
+      borderWidth: isSelected ? '2px' : '0',
+      borderStyle: isSelected ? 'solid' : 'none',
       borderColor: isSelected ? getTextColor(getColorHex(activity.color)) : 'transparent',
     }
   }
 
-  // Calculer la position et la hauteur d'une activité planifiée en drag
-  const getDragStyle = (): React.CSSProperties | null => {
-    if (!isDragging || !dragStart || !dragEnd) return null
+  // Calculer le style du hover preview pour une colonne de jour
+  const getHoverPreviewStyle = (day: Date): React.CSSProperties | null => {
+    // Vérifier si on est en train de draguer quelque chose
+    if (!draggedActivity && !draggedPlannedActivity && !draggedScheduledActivity) {
+      return null
+    }
 
-    const startMinutes = dragStart.hour * 60 + dragStart.minute
-    const endMinutes = dragEnd.hour * 60 + dragEnd.minute
-    const finalStart = Math.min(startMinutes, endMinutes)
-    const finalEnd = Math.max(startMinutes, endMinutes)
-    const duration = finalEnd - finalStart
+    // Vérifier si ce jour est dans la zone de hover
+    if (!hoveredSlot || hoveredSlot.day.toDateString() !== day.toDateString()) {
+      return null
+    }
 
-    const top = (finalStart / 60) * SLOT_HEIGHT
+    let activity: Activity | null = null
+    let duration = DEFAULT_ACTIVITY_DURATION // Par défaut 30 minutes
+
+    if (draggedActivity) {
+      activity = draggedActivity
+      duration = DEFAULT_ACTIVITY_DURATION // Utiliser la durée par défaut pour une nouvelle activité
+    } else if (draggedPlannedActivity) {
+      activity = activities.find(a => a.id === draggedPlannedActivity.activityId) || null
+      // Utiliser la durée de l'activité existante
+      const start = timeToMinutes(draggedPlannedActivity.startTime)
+      const end = timeToMinutes(draggedPlannedActivity.endTime)
+      duration = end - start
+    } else if (draggedScheduledActivity) {
+      activity = activities.find(a => a.id === draggedScheduledActivity.activityId) || null
+      // Utiliser la durée de l'activité existante
+      const start = timeToMinutes(draggedScheduledActivity.startTime)
+      const end = timeToMinutes(draggedScheduledActivity.endTime)
+      duration = end - start
+    }
+
+    if (!activity) return null
+
+    // Calculer la position et la hauteur du preview
+    const previewStartMinutes = hoveredSlot.hour * 60 + hoveredSlot.minute
+    const top = (previewStartMinutes / 60) * SLOT_HEIGHT
     const height = (duration / 60) * SLOT_HEIGHT
-
-    if (!selectedActivity) return null
 
     return {
       position: 'absolute',
@@ -277,14 +390,13 @@ export default function Planner({
       height: `${height}px`,
       left: '0',
       right: '0',
-      backgroundColor: getColorHex(selectedActivity.color),
-      opacity: 0.5,
+      backgroundColor: getColorHex(activity.color),
+      opacity: 0.6,
       borderRadius: '4px',
-      borderWidth: '2px',
-      borderStyle: 'dashed',
-      borderColor: getTextColor(getColorHex(selectedActivity.color)),
-      zIndex: 20,
+      zIndex: 30,
       pointerEvents: 'none',
+      border: `2px dashed ${getTextColor(getColorHex(activity.color))}`,
+      boxSizing: 'border-box',
     }
   }
 
@@ -360,14 +472,11 @@ export default function Planner({
     setResizeStartTime(null)
   }
 
-  // Gérer les événements globaux pour le drag
+  // Gérer les événements globaux pour le resize
   useEffect(() => {
-    if (!isDragging && !isResizing) return
+    if (!isResizing) return
 
     const handleGlobalMouseUp = () => {
-      if (isDragging) {
-        handleMouseUp()
-      }
       if (isResizing) {
         handleResizeEnd()
       }
@@ -376,30 +485,6 @@ export default function Planner({
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (isResizing) {
         handleResizeMove(e)
-        return
-      }
-      
-      if (!plannerRef.current || !isDragging || !dragStart) return
-
-      const rect = plannerRef.current.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-
-      // Calculer la colonne (jour)
-      const dayWidth = rect.width / 7
-      const dayIndex = Math.floor(x / dayWidth)
-      if (dayIndex < 0 || dayIndex >= 7) return
-
-      // Calculer l'heure et la minute
-      const headerHeight = 48
-      const relativeY = y - headerHeight
-      const totalMinutes = (relativeY / SLOT_HEIGHT) * 60
-      const hour = Math.floor(totalMinutes / 60)
-      const minute = Math.floor((totalMinutes % 60) / SLOT_MINUTES) * SLOT_MINUTES
-
-      if (hour >= 0 && hour < 24) {
-        const day = weekDays[dayIndex]
-        handleMouseMove(day, hour, minute)
       }
     }
 
@@ -409,7 +494,34 @@ export default function Planner({
       document.removeEventListener('mouseup', handleGlobalMouseUp)
       document.removeEventListener('mousemove', handleGlobalMouseMove)
     }
-  }, [isDragging, isResizing, dragStart, dragEnd, selectedActivity, weekDays, selectedPlannedActivity, selectedScheduledActivity, resizeStartY, resizeStartTime])
+  }, [isResizing, selectedPlannedActivity, selectedScheduledActivity, resizeStartY, resizeStartTime])
+
+  // Synchroniser le state local avec les props après une mise à jour
+  useEffect(() => {
+    // Synchroniser selectedScheduledActivity avec les props
+    if (selectedScheduledActivity && !isResizing) {
+      const updated = scheduledActivities.find(s => s.id === selectedScheduledActivity.id)
+      if (updated && (
+        updated.startTime !== selectedScheduledActivity.startTime ||
+        updated.endTime !== selectedScheduledActivity.endTime ||
+        updated.dayOfWeek !== selectedScheduledActivity.dayOfWeek
+      )) {
+        setSelectedScheduledActivity(updated)
+      }
+    }
+    
+    // Synchroniser selectedPlannedActivity avec les props
+    if (selectedPlannedActivity && !isResizing) {
+      const updated = plannedActivities.find(p => p.id === selectedPlannedActivity.id)
+      if (updated && (
+        updated.startTime !== selectedPlannedActivity.startTime ||
+        updated.endTime !== selectedPlannedActivity.endTime ||
+        updated.date !== selectedPlannedActivity.date
+      )) {
+        setSelectedPlannedActivity(updated)
+      }
+    }
+  }, [scheduledActivities, plannedActivities, isResizing])
 
   const handlePreviousWeek = () => {
     const prevWeek = new Date(weekStart)
@@ -428,33 +540,26 @@ export default function Planner({
       {/* Sélecteur d'activité */}
       <div className="p-4 border-b bg-gray-50">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium">Sélectionner une activité :</span>
+          <span className="font-medium">Glissez une activité vers le planner :</span>
           {activities.map(activity => (
             <button
               key={activity.id}
-              onClick={() => {
-                setSelectedActivity(activity)
+              draggable
+              onDragStart={(e) => handleActivityDragStart(e, activity)}
+              onDragEnd={() => {
+                setDraggedActivity(null)
+                setHoveredSlot(null)
               }}
-              className={`px-3 py-1 rounded transition-all ${
-                selectedActivity?.id === activity.id
-                  ? 'ring-2 ring-offset-2'
-                  : 'hover:opacity-80'
-              }`}
+              className="px-3 py-1 rounded transition-all hover:opacity-80 cursor-move"
               style={{
                 backgroundColor: getColorHex(activity.color),
                 color: getTextColor(getColorHex(activity.color)),
-                '--tw-ring-color': getColorHex(activity.color),
               } as React.CSSProperties}
             >
               {activity.title}
             </button>
           ))}
         </div>
-        {selectedActivity && (
-          <p className="text-sm text-gray-600 mt-2">
-            Cliquez et glissez sur le planner pour créer une activité planifiée
-          </p>
-        )}
       </div>
 
       {/* Planner */}
@@ -502,26 +607,22 @@ export default function Planner({
                     })
 
                     return slots.map((slot) => {
-                      const isDragSlot =
-                        isDragging &&
-                        dragStart &&
-                        dragEnd &&
-                        dayOfWeek === dragStart.day &&
-                        slot.hour === dragStart.hour &&
-                        slot.minute === dragStart.minute
-
                       return (
                         <div
                           key={`${slot.hour}-${slot.minute}`}
-                          className={`border-b border-r cursor-pointer transition-colors ${
-                            selectedActivity ? 'hover:bg-blue-100' : ''
-                          } ${isDragSlot ? 'bg-blue-200' : ''}`}
+                          className="border-b border-r"
                           style={{
                             height: `${SLOT_HEIGHT / (60 / SLOT_MINUTES)}px`,
                             position: 'relative',
                           }}
-                          onMouseDown={() => handleMouseDown(day, slot.hour, slot.minute)}
-                          onClick={() => handleSlotClick(day, slot.hour, slot.minute)}
+                          onDrop={(e) => handleDrop(e, day, slot.hour, slot.minute)}
+                          onDragOver={(e) => handleDragOver(e, day, slot.hour, slot.minute)}
+                          onDragLeave={handleDragLeave}
+                          onClick={() => {
+                            // Désélectionner les activités si on clique sur un slot vide
+                            setSelectedPlannedActivity(null)
+                            setSelectedScheduledActivity(null)
+                          }}
                         />
                       )
                     })
@@ -548,11 +649,29 @@ export default function Planner({
                       const activity = activities.find(a => a.id === displayPlanned.activityId)
 
                       const isSelected = selectedPlannedActivity?.id === planned.id
+                      const isCurrentlyResizing = isResizing && isSelected
 
                       return (
                         <div
                           key={planned.id}
-                          style={style}
+                          draggable={!isCurrentlyResizing}
+                          onDragStart={(e) => {
+                            if (isCurrentlyResizing) {
+                              e.preventDefault()
+                              return
+                            }
+                            handlePlannedActivityDragStart(e, planned)
+                          }}
+                          onDragEnd={() => {
+                            setDraggedPlannedActivity(null)
+                            setHoveredSlot(null)
+                          }}
+                          onDragOver={(e) => handleActivityDragOver(e, day, planned.id)}
+                          onDrop={(e) => handleActivityDrop(e, day, planned.id)}
+                          style={{
+                            ...style,
+                            cursor: isCurrentlyResizing ? 'ns-resize' : 'move',
+                          }}
                           className="flex flex-col justify-center relative"
                           title={activity?.title}
                           onClick={(e) => {
@@ -570,12 +689,14 @@ export default function Planner({
                           {/* Poignée de redimensionnement en haut */}
                           {isSelected && activity && (
                             <div
-                              className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize z-20"
+                              className="absolute left-1/2 transform -translate-x-1/2 cursor-ns-resize z-20"
                               onMouseDown={(e) => handleResizeStart(e, planned, 'top')}
                               style={{
-                                backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                                borderTop: '2px solid',
-                                borderColor: getTextColor(getColorHex(activity.color)),
+                                top: '-3px',
+                                width: '40px',
+                                height: '6px',
+                                backgroundColor: getTextColor(getColorHex(activity.color)),
+                                borderRadius: '3px',
                               }}
                             />
                           )}
@@ -588,12 +709,14 @@ export default function Planner({
                           {/* Poignée de redimensionnement en bas */}
                           {isSelected && activity && (
                             <div
-                              className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize z-20"
+                              className="absolute left-1/2 transform -translate-x-1/2 cursor-ns-resize z-20"
                               onMouseDown={(e) => handleResizeStart(e, planned, 'bottom')}
                               style={{
-                                backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                                borderBottom: '2px solid',
-                                borderColor: getTextColor(getColorHex(activity.color)),
+                                bottom: '-3px',
+                                width: '40px',
+                                height: '6px',
+                                backgroundColor: getTextColor(getColorHex(activity.color)),
+                                borderRadius: '3px',
                               }}
                             />
                           )}
@@ -658,10 +781,25 @@ export default function Planner({
                       const position = positions.get(scheduled.id || 0) || { left: 0, width: 100 }
 
                       const isSelected = selectedScheduledActivity?.id === scheduled.id
+                      const isCurrentlyResizing = isResizing && isSelected
 
                       return (
                         <div
                           key={scheduled.id}
+                          draggable={!isCurrentlyResizing}
+                          onDragStart={(e) => {
+                            if (isCurrentlyResizing) {
+                              e.preventDefault()
+                              return
+                            }
+                            handleScheduledActivityDragStart(e, scheduled)
+                          }}
+                          onDragEnd={() => {
+                            setDraggedScheduledActivity(null)
+                            setHoveredSlot(null)
+                          }}
+                          onDragOver={(e) => handleActivityDragOver(e, day, scheduled.id)}
+                          onDrop={(e) => handleActivityDrop(e, day, scheduled.id)}
                           style={{
                             position: 'absolute',
                             top: `${top}px`,
@@ -674,11 +812,11 @@ export default function Planner({
                             padding: '4px 8px',
                             fontSize: '12px',
                             opacity: 0.7,
-                            borderWidth: isSelected ? '3px' : '1px',
-                            borderStyle: 'dashed',
+                            borderWidth: isSelected ? '2px' : '1px',
+                            borderStyle: isSelected ? 'solid' : 'dashed',
                             borderColor: getTextColor(getColorHex(activity.color)),
                             zIndex: isSelected ? 15 : 5,
-                            cursor: 'pointer',
+                            cursor: isCurrentlyResizing ? 'ns-resize' : 'move',
                             marginLeft: position.left > 0 ? '2px' : '0',
                             marginRight: position.left + position.width < 100 ? '2px' : '0',
                             boxSizing: 'border-box',
@@ -700,12 +838,14 @@ export default function Planner({
                           {/* Poignée de redimensionnement en haut */}
                           {isSelected && activity && (
                             <div
-                              className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize z-20"
+                              className="absolute left-1/2 transform -translate-x-1/2 cursor-ns-resize z-20"
                               onMouseDown={(e) => handleResizeStart(e, scheduled, 'top')}
                               style={{
-                                backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                                borderTop: '2px solid',
-                                borderColor: getTextColor(getColorHex(activity.color)),
+                                top: '-3px',
+                                width: '40px',
+                                height: '6px',
+                                backgroundColor: getTextColor(getColorHex(activity.color)),
+                                borderRadius: '3px',
                               }}
                             />
                           )}
@@ -718,12 +858,14 @@ export default function Planner({
                           {/* Poignée de redimensionnement en bas */}
                           {isSelected && activity && (
                             <div
-                              className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize z-20"
+                              className="absolute left-1/2 transform -translate-x-1/2 cursor-ns-resize z-20"
                               onMouseDown={(e) => handleResizeStart(e, scheduled, 'bottom')}
                               style={{
-                                backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                                borderBottom: '2px solid',
-                                borderColor: getTextColor(getColorHex(activity.color)),
+                                bottom: '-3px',
+                                width: '40px',
+                                height: '6px',
+                                backgroundColor: getTextColor(getColorHex(activity.color)),
+                                borderRadius: '3px',
                               }}
                             />
                           )}
@@ -732,16 +874,12 @@ export default function Planner({
                     })
                   })()}
 
-                  {/* Afficher le drag en cours */}
-                  {isDragging && dragStart && dragEnd && dragStart.day === dayOfWeek && (
-                    <div style={getDragStyle() || {}}>
-                      {selectedActivity && (
-                        <div className="p-2 text-center">
-                          {selectedActivity.title}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* Preview du hover (affiché après toutes les activités pour être au-dessus) */}
+                  {(() => {
+                    const previewStyle = getHoverPreviewStyle(day)
+                    return previewStyle ? <div key="hover-preview" style={previewStyle} /> : null
+                  })()}
+
                 </div>
               </div>
             )
