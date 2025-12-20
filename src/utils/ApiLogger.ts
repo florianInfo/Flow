@@ -7,6 +7,7 @@ export interface ApiLogParams {
   pathParams?: Record<string, any>
   body?: any
   queryParams?: Record<string, any>
+  response?: any
 }
 
 /**
@@ -24,7 +25,7 @@ export interface ApiLogParams {
  * })
  */
 export function logApiRequest(params: ApiLogParams): void {
-  const { method, path, pathParams, body, queryParams } = params
+  const { method, path, pathParams, body, queryParams, response } = params
 
   // Remplacer les paramètres dans le path
   let finalPath = path
@@ -65,6 +66,10 @@ export function logApiRequest(params: ApiLogParams): void {
     logData.body = body
   }
 
+  if (response) {
+    logData.response = response
+  }
+
   // Afficher le log
   console.log('=== API REQUEST ===')
   console.log(`Method: ${method}`)
@@ -77,6 +82,9 @@ export function logApiRequest(params: ApiLogParams): void {
   }
   if (body) {
     console.log('Body:', JSON.stringify(body, null, 2))
+  }
+  if (response) {
+    console.log('Response:', JSON.stringify(response, null, 2))
   }
   console.log('Full URL:', fullUrl)
   console.log('==================')

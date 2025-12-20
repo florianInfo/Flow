@@ -6,15 +6,18 @@ import ActivityModal from './components/ActivityModal'
 import Planner from './components/Planner'
 import { ActivityDelete } from './utils/ActivityDelete'
 import { logApiRequest } from './utils/ApiLogger'
+import { generatePlannedActivities } from './utils/PlannedActivityGenerator'
 
 interface ActivitiesData {
   activities: Activity[]
 }
 
 type ViewMode = 'activities' | 'planner'
+type PlannerMode = 'routine' | 'calendrier'
 
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('activities')
+  const [plannerMode, setPlannerMode] = useState<PlannerMode>('routine')
   const [user, setUser] = useState<User>({
     id: 1,
     activities: [],
@@ -23,11 +26,35 @@ function App() {
   })
   const [loading, setLoading] = useState(true)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
+  const [selectedScheduledActivity, setSelectedScheduledActivity] = useState<ScheduledActivity | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date())
   const [currentCalendarId] = useState<number>(1)
 
+  // Réinitialiser la semaine courante quand on passe en mode routine
   useEffect(() => {
+    if (viewMode === 'planner' && plannerMode === 'routine') {
+      setCurrentWeek(new Date())
+    }
+  }, [plannerMode, viewMode])
+
+  // Charger le user depuis localStorage au démarrage
+  useEffect(() => {
+    const userId = 1
+    const storedUser = localStorage.getItem(`user_${userId}`)
+    
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser) as User
+        setUser(parsedUser)
+        setLoading(false)
+        return
+      } catch (error) {
+        console.error('Erreur lors du parsing du user depuis localStorage:', error)
+      }
+    }
+
+    // Si pas de user en localStorage, charger depuis le JSON
     fetch('/activity-example.json')
       .then(response => response.json())
       .then((data: ActivitiesData) => {
@@ -44,6 +71,13 @@ function App() {
         setLoading(false)
       })
   }, [])
+
+  // Sauvegarder le user dans localStorage à chaque modification
+  useEffect(() => {
+    if (user.id && !loading) {
+      localStorage.setItem(`user_${user.id}`, JSON.stringify(user))
+    }
+  }, [user, loading])
 
   const handleDelete = (id: number | undefined) => {
     if (id !== undefined) {
@@ -82,6 +116,42 @@ function App() {
     }
   }
 
+  // Fonction pour générer les plannedActivities basées sur les scheduledActivities
+  // Retourne les plannedActivities générées (sans doublons)
+  const generatePlannedActivitiesForScheduled = (
+    scheduledActivities: ScheduledActivity[],
+    currentUserState: User
+  ): PlannedActivity[] => {
+    const startDate = new Date()
+    const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) // 90 jours
+    
+    const generatedPlanned = generatePlannedActivities(scheduledActivities, startDate, endDate)
+    
+    // Assigner des IDs uniques aux nouvelles plannedActivities
+    const currentCalendar = currentUserState.calendars.find(c => c.id === currentCalendarId)
+    if (!currentCalendar) return generatedPlanned
+    
+    const existingIds = currentCalendar.plannedActivities.map(p => p.id || 0)
+    const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0
+    
+    const plannedWithIds = generatedPlanned.map((planned, index) => ({
+      ...planned,
+      id: maxId + index + 1,
+    }))
+    
+    // Filtrer les plannedActivities qui existent déjà (même date, même scheduledActivityId, même startTime)
+    const existingPlanned = currentCalendar.plannedActivities
+    const newPlanned = plannedWithIds.filter(newPlanned => {
+      return !existingPlanned.some(existing => 
+        existing.date === newPlanned.date &&
+        existing.scheduledActivityId === newPlanned.scheduledActivityId &&
+        existing.startTime === newPlanned.startTime
+      )
+    })
+    
+    return newPlanned
+  }
+
   const handleDeleteActivity = (id: number | undefined) => {
     handleDelete(id)
   }
@@ -99,6 +169,7 @@ function App() {
     switch (operation) {
       case 'onScheduledActivityCreate': {
         const scheduled = params.scheduled as ScheduledActivity
+        const generatedPlanned = params.generatedPlannedActivities as PlannedActivity[] || []
         const template = user.templates.find(t => t.id === 1)
         
         if (template) {
@@ -114,6 +185,18 @@ function App() {
               ]
             }
           })
+          
+          // Simuler le retour serveur avec les plannedActivities générées
+          setTimeout(() => {
+            logApiRequest({
+              method: 'GET',
+              path: '/api/users/:userId/calendars/:calendarId/planned-activities',
+              pathParams: { userId: user.id!, calendarId: currentCalendarId },
+              response: {
+                plannedActivities: generatedPlanned
+              }
+            })
+          }, 100)
         } else {
           // POST pour créer un nouveau template
           logApiRequest({
@@ -125,12 +208,25 @@ function App() {
               scheduledActivities: [scheduled]
             }
           })
+          
+          // Simuler le retour serveur avec les plannedActivities générées
+          setTimeout(() => {
+            logApiRequest({
+              method: 'GET',
+              path: '/api/users/:userId/calendars/:calendarId/planned-activities',
+              pathParams: { userId: user.id!, calendarId: currentCalendarId },
+              response: {
+                plannedActivities: generatedPlanned
+              }
+            })
+          }, 100)
         }
         break
       }
       
       case 'onScheduledActivityUpdate': {
         const scheduled = params.scheduled as ScheduledActivity
+        const generatedPlanned = params.generatedPlannedActivities as PlannedActivity[] || []
         const template = user.templates.find(t => 
           t.scheduledActivities.some(s => s.id === scheduled.id)
         )
@@ -152,6 +248,18 @@ function App() {
               periodicity: scheduled.periodicity
             }
           })
+          
+          // Simuler le retour serveur avec les plannedActivities générées
+          setTimeout(() => {
+            logApiRequest({
+              method: 'GET',
+              path: '/api/users/:userId/calendars/:calendarId/planned-activities',
+              pathParams: { userId: user.id!, calendarId: currentCalendarId },
+              response: {
+                plannedActivities: generatedPlanned
+              }
+            })
+          }, 100)
         }
         break
       }
@@ -228,24 +336,26 @@ function App() {
     // Générer un nouvel ID pour la ScheduledActivity
     const allScheduledIds = user.templates.flatMap(t => t.scheduledActivities.map(s => s.id || 0))
     const newId = allScheduledIds.length > 0 ? Math.max(...allScheduledIds) + 1 : 1
-    const newScheduled = { ...scheduled, id: newId }
+    // Ajouter une périodicité par défaut : 1 fois par semaine
+    const newScheduled: ScheduledActivity = { 
+      ...scheduled, 
+      id: newId,
+      periodicity: scheduled.periodicity || { frequency: 1, unit: 'weekly' }
+    }
     
     setUser(prev => {
       // Trouver ou créer le template principal (id: 1)
       const templateId = 1
       const existingTemplate = prev.templates.find(t => t.id === templateId)
       
+      let updatedTemplates
       if (existingTemplate) {
         // Mettre à jour le template existant
         const updatedTemplate = {
           ...existingTemplate,
           scheduledActivities: [...existingTemplate.scheduledActivities, newScheduled],
         }
-        
-        return {
-          ...prev,
-          templates: prev.templates.map(t => t.id === templateId ? updatedTemplate : t),
-        }
+        updatedTemplates = prev.templates.map(t => t.id === templateId ? updatedTemplate : t)
       } else {
         // Créer un nouveau template
         const newTemplate = {
@@ -253,29 +363,94 @@ function App() {
           userId: prev.id!,
           scheduledActivities: [newScheduled],
         }
-        
-        return {
-          ...prev,
-          templates: [...prev.templates, newTemplate],
-        }
+        updatedTemplates = [...prev.templates, newTemplate]
       }
+      
+      const updatedUser = {
+        ...prev,
+        templates: updatedTemplates,
+      }
+      
+      // Simuler l'appel serveur : générer les plannedActivities
+      const allScheduled = updatedTemplates.flatMap(t => t.scheduledActivities)
+      const generatedPlanned = generatePlannedActivitiesForScheduled(allScheduled, updatedUser)
+      
+      // Ajouter les plannedActivities générées au calendrier
+      const currentCalendar = updatedUser.calendars.find(c => c.id === currentCalendarId)
+      if (currentCalendar && generatedPlanned.length > 0) {
+        updatedUser.calendars = updatedUser.calendars.map(cal =>
+          cal.id === currentCalendarId
+            ? { ...cal, plannedActivities: [...cal.plannedActivities, ...generatedPlanned] }
+            : cal
+        )
+      }
+      
+      // Log de l'appel API simulé avec les plannedActivities générées
+      setTimeout(() => {
+        logPlannerUpdate('onScheduledActivityCreate', { 
+          scheduled: newScheduled,
+          generatedPlannedActivities: generatedPlanned 
+        })
+      }, 0)
+      
+      return updatedUser
     })
-    
-    logPlannerUpdate('onScheduledActivityCreate', { scheduled: newScheduled })
   }
 
   const handleScheduledActivityUpdate = (scheduled: ScheduledActivity) => {
-    setUser(prev => ({
-      ...prev,
-      templates: prev.templates.map(template => ({
+    setUser(prev => {
+      const updatedTemplates = prev.templates.map(template => ({
         ...template,
         scheduledActivities: template.scheduledActivities.map(s => 
           s.id === scheduled.id ? scheduled : s
         ),
-      })),
-    }))
-    
-    logPlannerUpdate('onScheduledActivityUpdate', { scheduled })
+      }))
+      
+      const updatedUser = {
+        ...prev,
+        templates: updatedTemplates,
+      }
+      
+      // Simuler l'appel serveur : régénérer toutes les plannedActivities pour cette scheduledActivity
+      // Supprimer les anciennes plannedActivities liées à cette scheduledActivity
+      const currentCalendar = updatedUser.calendars.find(c => c.id === currentCalendarId)
+      if (currentCalendar) {
+        const filteredPlanned = currentCalendar.plannedActivities.filter(
+          p => p.scheduledActivityId !== scheduled.id
+        )
+        
+        // Générer les nouvelles plannedActivities
+        const generatedPlanned = generatePlannedActivities(
+          [scheduled],
+          new Date(),
+          new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+        )
+        
+        // Assigner des IDs
+        const existingIds = filteredPlanned.map(p => p.id || 0)
+        const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0
+        const plannedWithIds = generatedPlanned.map((planned, index) => ({
+          ...planned,
+          id: maxId + index + 1,
+        }))
+        
+        updatedUser.calendars = updatedUser.calendars.map(cal =>
+          cal.id === currentCalendarId
+            ? { ...cal, plannedActivities: [...filteredPlanned, ...plannedWithIds] }
+            : cal
+        )
+      }
+      
+      // Log de l'appel API simulé avec les plannedActivities générées
+      logPlannerUpdate('onScheduledActivityUpdate', { 
+        scheduled,
+        generatedPlannedActivities: updatedUser.calendars.find(c => c.id === currentCalendarId)?.plannedActivities.filter(
+          p => p.scheduledActivityId === scheduled.id
+        ) || []
+      })
+      
+      return updatedUser
+    })
   }
 
   const handlePlannedActivityCreate = (planned: PlannedActivity) => {
@@ -351,7 +526,7 @@ function App() {
           />
           
           {/* Navigation entre les vues */}
-          <nav className="flex gap-2">
+          <nav className="flex gap-2 items-center">
             <button
               onClick={() => setViewMode('activities')}
               className={`px-4 py-2 rounded transition-colors ${
@@ -372,6 +547,30 @@ function App() {
             >
               Planner
             </button>
+            {viewMode === 'planner' && (
+              <div className="flex gap-2 ml-4">
+                <button
+                  onClick={() => setPlannerMode('routine')}
+                  className={`px-4 py-2 rounded transition-colors ${
+                    plannerMode === 'routine'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Routine
+                </button>
+                <button
+                  onClick={() => setPlannerMode('calendrier')}
+                  className={`px-4 py-2 rounded transition-colors ${
+                    plannerMode === 'calendrier'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Calendrier
+                </button>
+              </div>
+            )}
           </nav>
         </div>
       </header>
@@ -413,10 +612,20 @@ function App() {
             onPlannedActivityUpdate={handlePlannedActivityUpdate}
             currentWeek={currentWeek}
             onWeekChange={handleWeekChange}
-            onActivityDoubleClick={(activityId) => {
+            mode={plannerMode}
+            onActivityDoubleClick={(activityId, scheduledActivityId) => {
               const activity = user.activities.find(a => a.id === activityId)
               if (activity) {
                 setSelectedActivity(activity)
+                // Si on a un scheduledActivityId, trouver la scheduledActivity correspondante
+                if (scheduledActivityId) {
+                  const scheduled = user.templates
+                    .flatMap(t => t.scheduledActivities)
+                    .find(s => s.id === scheduledActivityId)
+                  setSelectedScheduledActivity(scheduled || null)
+                } else {
+                  setSelectedScheduledActivity(null)
+                }
                 setIsModalOpen(true)
               }
             }}
@@ -428,10 +637,16 @@ function App() {
         activity={selectedActivity}
         activities={user.activities}
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedScheduledActivity(null)
+        }}
         onSave={handleSaveActivity}
         onDelete={handleDeleteActivity}
         onActivityClick={handleActivityClickInModal}
+        readOnly={viewMode === 'planner' && plannerMode === 'calendrier'}
+        scheduledActivity={selectedScheduledActivity}
+        onScheduledActivityUpdate={handleScheduledActivityUpdate}
       />
     </div>
   )
