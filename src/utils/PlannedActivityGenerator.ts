@@ -55,30 +55,63 @@ export function generatePlannedActivities(
           
         case 'monthly':
           // Pour monthly, on génère tous les X mois
-          // Si dayOfWeek est défini, on génère pour le premier jour de ce type dans chaque mois (ex: premier lundi)
+          // Si dayOfWeek est défini, on génère pour le jour de la semaine correspondant à la semaine du mois spécifiée
           // Sinon, on génère pour le même jour du mois (ex: le 15 de chaque mois)
           
           if (scheduled.dayOfWeek !== undefined) {
-            // Si dayOfWeek est défini, on génère uniquement pour le premier jour de ce type dans le mois
+            // Si dayOfWeek est défini, on génère uniquement pour ce jour de la semaine
             if (scheduled.dayOfWeek !== dayOfWeek) {
               currentDate.setDate(currentDate.getDate() + 1)
               continue
             }
-            // Vérifier que c'est bien le premier jour de ce type dans le mois
+            
+            // Calculer la semaine du mois souhaitée (1-4 ou -1 pour dernière)
+            const weekOfMonth = scheduled.periodicity?.weekOfMonth || 1
+            
+            // Calculer dans quelle semaine du mois on se trouve
             const dayOfMonth = currentDate.getDate()
-            const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-            const firstDayOfWeek = firstDayOfMonth.getDay()
-            // Calculer le jour du mois du premier jour de la semaine correspondant
-            // Si le 1er est déjà le bon jour, c'est le 1er
-            // Sinon, on calcule combien de jours ajouter
-            let firstOccurrenceDay: number
-            if (firstDayOfWeek === scheduled.dayOfWeek) {
-              firstOccurrenceDay = 1
+            const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()
+            
+            let currentWeekOfMonth: number
+            if (weekOfMonth === -1) {
+              // Dernière semaine : vérifier si on est dans les 7 derniers jours
+              const lastWeekStart = lastDayOfMonth - 6
+              if (dayOfMonth >= lastWeekStart) {
+                currentWeekOfMonth = -1
+              } else {
+                currentWeekOfMonth = Math.ceil(dayOfMonth / 7)
+              }
             } else {
-              const daysToAdd = (scheduled.dayOfWeek - firstDayOfWeek + 7) % 7
-              firstOccurrenceDay = daysToAdd + 1
+              // Semaine normale (1-4)
+              currentWeekOfMonth = Math.ceil(dayOfMonth / 7)
             }
-            if (dayOfMonth !== firstOccurrenceDay) {
+            
+            // Vérifier que c'est bien la bonne semaine du mois
+            if (currentWeekOfMonth !== weekOfMonth) {
+              currentDate.setDate(currentDate.getDate() + 1)
+              continue
+            }
+            
+            // Vérifier que c'est bien le jour de la semaine correspondant dans cette semaine du mois
+            const weekStartDay = (weekOfMonth === -1) 
+              ? Math.max(1, lastDayOfMonth - 6)
+              : ((weekOfMonth - 1) * 7) + 1
+            const weekEndDay = (weekOfMonth === -1)
+              ? lastDayOfMonth
+              : Math.min(weekOfMonth * 7, lastDayOfMonth)
+            
+            // Trouver le jour de la semaine correspondant dans cette plage
+            let targetDay: number | null = null
+            for (let d = weekStartDay; d <= weekEndDay; d++) {
+              const testDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), d)
+              if (testDate.getDay() === scheduled.dayOfWeek) {
+                targetDay = d
+                break
+              }
+            }
+            
+            // Si on n'a pas trouvé de jour correspondant dans cette semaine, passer au jour suivant
+            if (targetDay === null || dayOfMonth !== targetDay) {
               currentDate.setDate(currentDate.getDate() + 1)
               continue
             }

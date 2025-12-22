@@ -224,6 +224,43 @@ function App() {
         break
       }
       
+      case 'onScheduledActivityDelete': {
+        const scheduledActivityId = params.scheduledActivityId as number
+        const templateId = params.templateId as number
+        const template = user.templates.find(t => t.id === templateId)
+        const scheduled = template?.scheduledActivities.find(s => s.id === scheduledActivityId)
+
+        if (template && scheduled && scheduledActivityId) {
+          logApiRequest({
+            method: 'DELETE',
+            path: '/api/users/:userId/templates/:templateId/scheduled-activities/:scheduledActivityId',
+            pathParams: {
+              userId: user.id!,
+              templateId: template.id!,
+              scheduledActivityId: scheduledActivityId
+            }
+          })
+
+          // Simuler le retour serveur
+          setTimeout(() => {
+            logApiRequest({
+              method: 'DELETE',
+              path: '/api/users/:userId/templates/:templateId/scheduled-activities/:scheduledActivityId',
+              pathParams: {
+                userId: user.id!,
+                templateId: template.id!,
+                scheduledActivityId: scheduledActivityId
+              },
+              response: {
+                success: true,
+                message: 'Scheduled activity deleted successfully'
+              }
+            })
+          }, 100)
+        }
+        break
+      }
+
       case 'onScheduledActivityUpdate': {
         const scheduled = params.scheduled as ScheduledActivity
         const generatedPlanned = params.generatedPlannedActivities as PlannedActivity[] || []
@@ -331,16 +368,47 @@ function App() {
     }
   }
 
+  // Fonction pour calculer la semaine du mois (1-4 ou -1 pour dernière)
+  const calculateWeekOfMonth = (date: Date): number => {
+    const dayOfMonth = date.getDate()
+    const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+    
+    // Calculer dans quelle semaine du mois on se trouve
+    // Semaine 1: jours 1-7, Semaine 2: jours 8-14, Semaine 3: jours 15-21, Semaine 4: jours 22-28
+    // Dernière semaine: les 7 derniers jours du mois
+    
+    // Vérifier si on est dans la dernière semaine (les 7 derniers jours)
+    const lastWeekStart = lastDayOfMonth - 6
+    if (dayOfMonth >= lastWeekStart) {
+      // C'est la dernière semaine
+      return -1
+    }
+    
+    // Sinon, calculer la semaine normale (1-4)
+    const week = Math.ceil(dayOfMonth / 7)
+    return Math.min(week, 4) // Maximum 4
+  }
+
   // Handlers pour le Planner
-  const handleScheduledActivityCreate = (scheduled: ScheduledActivity) => {
+  const handleScheduledActivityCreate = (scheduled: ScheduledActivity, day?: Date) => {
     // Générer un nouvel ID pour la ScheduledActivity
     const allScheduledIds = user.templates.flatMap(t => t.scheduledActivities.map(s => s.id || 0))
     const newId = allScheduledIds.length > 0 ? Math.max(...allScheduledIds) + 1 : 1
-    // Ajouter une périodicité par défaut : 1 fois par semaine
+    
+    // Calculer la semaine du mois si la périodicité est monthly
+    let periodicity = scheduled.periodicity || { frequency: 1, unit: 'weekly' }
+    if (periodicity.unit === 'monthly' && scheduled.dayOfWeek !== undefined) {
+      // Utiliser le jour où l'utilisateur a inséré l'activité pour calculer la semaine du mois
+      // Si day n'est pas fourni (mode routine), utiliser la date actuelle
+      const dateToUse = day || new Date()
+      const weekOfMonth = calculateWeekOfMonth(dateToUse)
+      periodicity = { ...periodicity, weekOfMonth }
+    }
+    
     const newScheduled: ScheduledActivity = { 
       ...scheduled, 
       id: newId,
-      periodicity: scheduled.periodicity || { frequency: 1, unit: 'weekly' }
+      periodicity
     }
     
     setUser(prev => {
@@ -390,6 +458,50 @@ function App() {
         logPlannerUpdate('onScheduledActivityCreate', { 
           scheduled: newScheduled,
           generatedPlannedActivities: generatedPlanned 
+        })
+      }, 0)
+      
+      return updatedUser
+    })
+  }
+
+  const handleScheduledActivityDelete = (scheduledActivityId: number) => {
+    setUser(prev => {
+      // Trouver le template qui contient cette scheduledActivity
+      const template = prev.templates.find(t =>
+        t.scheduledActivities.some(s => s.id === scheduledActivityId)
+      )
+      
+      if (!template) return prev
+      
+      // Supprimer la scheduledActivity du template
+      const updatedTemplates = prev.templates.map(t => {
+        if (t.id === template.id) {
+          return {
+            ...t,
+            scheduledActivities: t.scheduledActivities.filter(s => s.id !== scheduledActivityId),
+          }
+        }
+        return t
+      })
+      
+      // Supprimer les plannedActivities associées à cette scheduledActivity
+      const updatedUser = {
+        ...prev,
+        templates: updatedTemplates,
+        calendars: prev.calendars.map(cal => ({
+          ...cal,
+          plannedActivities: cal.plannedActivities.filter(
+            p => p.scheduledActivityId !== scheduledActivityId
+          ),
+        })),
+      }
+      
+      // Log de l'appel API simulé
+      setTimeout(() => {
+        logPlannerUpdate('onScheduledActivityDelete', { 
+          scheduledActivityId,
+          templateId: template.id,
         })
       }, 0)
       
@@ -512,7 +624,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 select-none flex flex-col">
+    <div className="h-screen bg-gray-50 select-none flex flex-col overflow-hidden">
       <header className="w-full px-4 py-1 flex-shrink-0" style={{ backgroundColor: '#ece3d0' }}>
         <div className="flex items-center justify-between">
           <img 
@@ -601,36 +713,37 @@ function App() {
           </button>
         </main>
       ) : (
-        <main className="flex-1 overflow-hidden">
-          <Planner
-            activities={user.activities}
-            scheduledActivities={user.templates.flatMap(t => t.scheduledActivities)}
-            plannedActivities={user.calendars.find(c => c.id === currentCalendarId)?.plannedActivities || []}
-            onScheduledActivityCreate={handleScheduledActivityCreate}
-            onScheduledActivityUpdate={handleScheduledActivityUpdate}
-            onPlannedActivityCreate={handlePlannedActivityCreate}
-            onPlannedActivityUpdate={handlePlannedActivityUpdate}
-            currentWeek={currentWeek}
-            onWeekChange={handleWeekChange}
-            mode={plannerMode}
-            onActivityDoubleClick={(activityId, scheduledActivityId) => {
-              const activity = user.activities.find(a => a.id === activityId)
-              if (activity) {
-                setSelectedActivity(activity)
-                // Si on a un scheduledActivityId, trouver la scheduledActivity correspondante
-                if (scheduledActivityId) {
-                  const scheduled = user.templates
-                    .flatMap(t => t.scheduledActivities)
-                    .find(s => s.id === scheduledActivityId)
-                  setSelectedScheduledActivity(scheduled || null)
-                } else {
-                  setSelectedScheduledActivity(null)
+        <div className="flex-1 min-h-0 overflow-hidden">
+            <Planner
+              activities={user.activities}
+              scheduledActivities={user.templates.flatMap(t => t.scheduledActivities)}
+              plannedActivities={user.calendars.find(c => c.id === currentCalendarId)?.plannedActivities || []}
+              onScheduledActivityCreate={handleScheduledActivityCreate}
+              onScheduledActivityUpdate={handleScheduledActivityUpdate}
+              onScheduledActivityDelete={handleScheduledActivityDelete}
+              onPlannedActivityCreate={handlePlannedActivityCreate}
+              onPlannedActivityUpdate={handlePlannedActivityUpdate}
+              currentWeek={currentWeek}
+              onWeekChange={handleWeekChange}
+              mode={plannerMode}
+              onActivityDoubleClick={(activityId, scheduledActivityId) => {
+                const activity = user.activities.find(a => a.id === activityId)
+                if (activity) {
+                  setSelectedActivity(activity)
+                  // Si on a un scheduledActivityId, trouver la scheduledActivity correspondante
+                  if (scheduledActivityId) {
+                    const scheduled = user.templates
+                      .flatMap(t => t.scheduledActivities)
+                      .find(s => s.id === scheduledActivityId)
+                    setSelectedScheduledActivity(scheduled || null)
+                  } else {
+                    setSelectedScheduledActivity(null)
+                  }
+                  setIsModalOpen(true)
                 }
-                setIsModalOpen(true)
-              }
-            }}
-          />
-        </main>
+              }}
+            />
+        </div>
       )}
 
       <ActivityModal

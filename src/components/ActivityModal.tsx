@@ -93,6 +93,7 @@ export default function ActivityModal({
   const [periodicity, setPeriodicity] = useState<Periodicity>({
     frequency: scheduledActivity?.periodicity?.frequency || 1,
     unit: scheduledActivity?.periodicity?.unit || 'weekly',
+    weekOfMonth: scheduledActivity?.periodicity?.weekOfMonth,
   })
 
   useEffect(() => {
@@ -103,13 +104,24 @@ export default function ActivityModal({
     }
   }, [scheduledActivity])
 
-  const handlePeriodicityChange = (field: 'frequency' | 'unit', value: number | 'daily' | 'weekly' | 'monthly') => {
+  const handlePeriodicityChange = (field: 'frequency' | 'unit' | 'weekOfMonth', value: number | 'daily' | 'weekly' | 'monthly') => {
     if (readOnly || !scheduledActivity) return
     
-    const updatedPeriodicity: Periodicity = {
+    let updatedPeriodicity: Periodicity = {
       ...periodicity,
       [field]: value,
     }
+    
+    // Si on change d'unit vers monthly et qu'on n'a pas de weekOfMonth, mettre 1 par défaut
+    if (field === 'unit' && value === 'monthly' && !updatedPeriodicity.weekOfMonth) {
+      updatedPeriodicity.weekOfMonth = 1
+    }
+    
+    // Si on change d'unit et ce n'est pas monthly, réinitialiser weekOfMonth
+    if (field === 'unit' && value !== 'monthly') {
+      updatedPeriodicity.weekOfMonth = undefined
+    }
+    
     setPeriodicity(updatedPeriodicity)
     
     // Mettre à jour la scheduledActivity
@@ -399,7 +411,7 @@ export default function ActivityModal({
         {scheduledActivity && !readOnly && (
           <div className="border-t p-4" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
             <h3 className="font-semibold mb-3" style={{ color: textColor }}>Fréquence de répétition</h3>
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center flex-wrap">
               <input
                 type="number"
                 min="1"
@@ -435,6 +447,28 @@ export default function ActivityModal({
                 <option value="weekly">Hebdomadaire</option>
                 <option value="monthly">Mensuel</option>
               </select>
+              {periodicity.unit === 'monthly' && (
+                <select
+                  value={periodicity.weekOfMonth || 1}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value)
+                    handlePeriodicityChange('weekOfMonth', value)
+                  }}
+                  className="px-3 py-2 border rounded outline-none focus:ring-2"
+                  style={{
+                    color: textColor,
+                    backgroundColor: backgroundColor,
+                    borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
+                    '--tw-ring-color': textColor,
+                  } as React.CSSProperties}
+                >
+                  <option value="1">1ère semaine</option>
+                  <option value="2">2ème semaine</option>
+                  <option value="3">3ème semaine</option>
+                  <option value="4">4ème semaine</option>
+                  <option value="-1">Dernière semaine</option>
+                </select>
+              )}
             </div>
           </div>
         )}

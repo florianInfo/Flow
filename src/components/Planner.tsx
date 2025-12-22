@@ -9,8 +9,9 @@ interface PlannerProps {
   activities: Activity[]
   scheduledActivities: ScheduledActivity[]
   plannedActivities: PlannedActivity[]
-  onScheduledActivityCreate?: (scheduled: ScheduledActivity) => void
+  onScheduledActivityCreate?: (scheduled: ScheduledActivity, day?: Date) => void
   onScheduledActivityUpdate?: (scheduled: ScheduledActivity) => void
+  onScheduledActivityDelete?: (scheduledActivityId: number) => void
   onPlannedActivityCreate?: (planned: PlannedActivity) => void
   onPlannedActivityUpdate?: (planned: PlannedActivity) => void
   currentWeek?: Date
@@ -19,7 +20,9 @@ interface PlannerProps {
   onActivityDoubleClick?: (activityId: number, scheduledActivityId?: number) => void
 }
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i)
+const START_HOUR = 6 // Heure de début (6h)
+const END_HOUR = 22 // Dernière heure affichée (22h)
+const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => i + START_HOUR) // 6 à 22 inclus
 const DAYS_OF_WEEK = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 const SLOT_HEIGHT = 60 // Hauteur d'un slot d'une heure en pixels
 const SLOT_MINUTES = 15 // Granularité des slots (15 minutes)
@@ -31,6 +34,7 @@ export default function Planner({
   plannedActivities,
   onScheduledActivityCreate,
   onScheduledActivityUpdate,
+  onScheduledActivityDelete,
   onPlannedActivityUpdate,
   currentWeek = new Date(),
   onWeekChange,
@@ -140,8 +144,10 @@ export default function Planner({
         startTime,
         endTime,
         dayOfWeek,
+        // Calculer la semaine du mois pour monthly (sera utilisé si l'utilisateur change en monthly)
+        // On passe le jour pour que App.tsx puisse calculer la semaine
       }
-      onScheduledActivityCreate?.(newScheduled)
+      onScheduledActivityCreate?.(newScheduled, day)
       setDraggedActivity(null)
       setHoveredSlot(null)
       return
@@ -205,11 +211,16 @@ export default function Planner({
       const duration = end - start
       const endTime = minutesToTime(hour * 60 + minute + duration)
       
+      // Pour les activités quotidiennes (daily avec frequency < 7), on ne change pas le dayOfWeek
+      // car elles s'affichent sur tous les jours
       const updated: ScheduledActivity = {
         ...scheduled,
         startTime,
         endTime,
-        dayOfWeek,
+        // Ne mettre à jour dayOfWeek que si ce n'est pas une activité quotidienne
+        ...(scheduled.periodicity?.unit === 'daily' && scheduled.periodicity.frequency < 7 
+          ? {} 
+          : { dayOfWeek }),
       }
       onScheduledActivityUpdate?.(updated)
       setDraggedScheduledActivity(null)
@@ -230,16 +241,16 @@ export default function Planner({
     if (!plannerRef.current) return null
     
     const rect = plannerRef.current.getBoundingClientRect()
-    const headerHeight = 48
-    const relativeY = e.clientY - rect.top - headerHeight
+    // Le header est maintenant fixe et en dehors de la zone scrollable, donc headerHeight = 0
+    const relativeY = e.clientY - rect.top
     
     if (relativeY < 0) return null
     
     const totalMinutes = (relativeY / SLOT_HEIGHT) * 60
-    const hour = Math.floor(totalMinutes / 60)
+    const hour = Math.floor(totalMinutes / 60) + START_HOUR
     const minute = Math.floor((totalMinutes % 60) / SLOT_MINUTES) * SLOT_MINUTES
     
-    if (hour < 0 || hour >= 24) return null
+    if (hour < START_HOUR || hour > END_HOUR) return null
     
     return { hour, minute }
   }
@@ -361,7 +372,9 @@ export default function Planner({
     const activity = activities.find(a => a.id === planned.activityId)
     if (!activity) return null
 
-    const top = (start / 60) * SLOT_HEIGHT
+    // Ajuster la position en soustrayant les heures avant START_HOUR
+    const startMinutesFromStart = start - (START_HOUR * 60)
+    const top = (startMinutesFromStart / 60) * SLOT_HEIGHT
     const height = (duration / 60) * SLOT_HEIGHT
 
     // Calculer la position et largeur en fonction des chevauchements
@@ -429,7 +442,8 @@ export default function Planner({
 
     // Calculer la position et la hauteur du preview
     const previewStartMinutes = hoveredSlot.hour * 60 + hoveredSlot.minute
-    const top = (previewStartMinutes / 60) * SLOT_HEIGHT
+    const previewStartMinutesFromStart = previewStartMinutes - (START_HOUR * 60)
+    const top = (previewStartMinutesFromStart / 60) * SLOT_HEIGHT
     const height = (duration / 60) * SLOT_HEIGHT
 
     return {
@@ -466,13 +480,13 @@ export default function Planner({
     if (!isResizing || !resizeStartY || !resizeStartTime || !plannerRef.current) return
 
     const rect = plannerRef.current.getBoundingClientRect()
-    const headerHeight = 48
-    const relativeY = e.clientY - rect.top - headerHeight
+    // Le header est maintenant fixe et en dehors de la zone scrollable, donc headerHeight = 0
+    const relativeY = e.clientY - rect.top
     const totalMinutes = (relativeY / SLOT_HEIGHT) * 60
-    const hour = Math.floor(totalMinutes / 60)
+    const hour = Math.floor(totalMinutes / 60) + START_HOUR
     const minute = Math.floor((totalMinutes % 60) / SLOT_MINUTES) * SLOT_MINUTES
     
-    if (hour < 0 || hour >= 24) return
+    if (hour < START_HOUR || hour > END_HOUR) return
 
     const newTime = minutesToTime(hour * 60 + minute)
     
@@ -625,10 +639,10 @@ export default function Planner({
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Sélecteur d'activité - uniquement en mode routine */}
       {mode === 'routine' && (
-        <div className="p-4 border-b bg-gray-50">
+        <div className="p-4 border-b bg-gray-50 flex-shrink-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium">Glissez une activité vers le planner :</span>
             {activities.map(activity => (
@@ -654,35 +668,34 @@ export default function Planner({
       )}
 
       {/* Planner */}
-      <div className="flex-1 overflow-auto" ref={plannerRef}>
-        <div className="flex">
-          {/* Colonne des heures */}
-          <div className="w-20 flex-shrink-0 border-r">
-            <div className="h-12 border-b"></div>
-            {HOURS.map(hour => (
-              <div
-                key={hour}
-                className="border-b"
-                style={{ height: `${SLOT_HEIGHT}px` }}
-              >
-                <div className="text-xs text-gray-500 p-1">{hour}h</div>
-              </div>
-            ))}
-          </div>
+      <div className="flex-1 flex flex-col bg-white min-h-0">
+        {/* Zone scrollable avec les heures et les slots */}
+        <div className="flex-1 overflow-auto" ref={plannerRef} style={{ minHeight: 0 }}>
+          {/* Header sticky avec les jours */}
+          <div className="flex border-b sticky top-0 z-20 flex-shrink-0" style={{ boxSizing: 'border-box', width: '100%', background: 'linear-gradient(to bottom, rgba(234, 221, 205, 1), rgba(234, 221, 205, 0.25))' }}>
+            {/* Colonne des heures - header vide */}
+            <div className="w-20 flex-shrink-0 border-r" style={{ boxSizing: 'border-box', background: 'linear-gradient(to bottom, rgba(234, 221, 205, 1), rgba(234, 221, 205, 0.25))' }}>
+              <div className="h-12"></div>
+            </div>
 
-          {/* Colonnes des jours */}
-          {weekDays.map((day, dayIndex) => {
-            const dayOfWeek = day.getDay()
-            // En mode routine, on ne vérifie pas si c'est aujourd'hui (pas de date réelle)
-            const isToday = mode === 'calendrier' && day.toDateString() === new Date().toDateString()
+            {/* En-têtes des jours */}
+            {weekDays.map((day, dayIndex) => {
+              const dayOfWeek = day.getDay()
+              // En mode routine, on ne vérifie pas si c'est aujourd'hui (pas de date réelle)
+              const isToday = mode === 'calendrier' && day.toDateString() === new Date().toDateString()
 
-            return (
-              <div key={dayIndex} className="flex-1 border-r last:border-r-0 relative">
-                {/* En-tête du jour */}
+              return (
                 <div
-                  className={`h-12 border-b text-center flex flex-col justify-center ${
-                    isToday ? 'bg-blue-50 font-semibold' : 'bg-gray-50'
+                  key={dayIndex}
+                  className={`flex-1 border-r last:border-r-0 h-12 text-center flex flex-col justify-center ${
+                    isToday ? 'font-semibold' : ''
                   }`}
+                  style={{ 
+                    boxSizing: 'border-box',
+                    background: isToday 
+                      ? 'linear-gradient(to bottom, rgba(213, 196, 168, 1), rgba(213, 196, 168, 0.25))'
+                      : 'linear-gradient(to bottom, rgba(234, 221, 205, 1), rgba(234, 221, 205, 0.25))'
+                  }}
                 >
                   <div className="text-sm">{DAYS_OF_WEEK[dayOfWeek]}</div>
                   {mode === 'calendrier' && (
@@ -691,9 +704,31 @@ export default function Planner({
                     </div>
                   )}
                 </div>
+              )
+            })}
+          </div>
+          <div className="flex">
+            {/* Colonne des heures */}
+            <div className="w-20 flex-shrink-0 border-r">
+              {HOURS.map(hour => (
+                <div
+                  key={hour}
+                  className="border-b"
+                  style={{ height: `${SLOT_HEIGHT}px` }}
+                >
+                  <div className="text-xs text-gray-500 p-1">{hour}h</div>
+                </div>
+              ))}
+            </div>
 
-                {/* Slots horaires */}
-                <div className="relative" style={{ height: `${HOURS.length * SLOT_HEIGHT}px` }}>
+            {/* Colonnes des jours */}
+            {weekDays.map((day, dayIndex) => {
+              const dayOfWeek = day.getDay()
+
+              return (
+                <div key={dayIndex} className="flex-1 border-r last:border-r-0 relative">
+                  {/* Slots horaires */}
+                  <div className="relative" style={{ height: `${HOURS.length * SLOT_HEIGHT}px` }}>
                   {HOURS.map(hour => {
                     const slots = Array.from({ length: 60 / SLOT_MINUTES }, (_, i) => {
                       const minute = i * SLOT_MINUTES
@@ -709,9 +744,9 @@ export default function Planner({
                             height: `${SLOT_HEIGHT / (60 / SLOT_MINUTES)}px`,
                             position: 'relative',
                           }}
-                          onDrop={mode === 'routine' ? (e) => handleDrop(e, day, slot.hour, slot.minute) : undefined}
-                          onDragOver={mode === 'routine' ? (e) => handleDragOver(e, day, slot.hour, slot.minute) : undefined}
-                          onDragLeave={mode === 'routine' ? handleDragLeave : undefined}
+                          onDrop={(e) => handleDrop(e, day, slot.hour, slot.minute)}
+                          onDragOver={(e) => handleDragOver(e, day, slot.hour, slot.minute)}
+                          onDragLeave={handleDragLeave}
                           onClick={() => {
                             // Désélectionner les activités si on clique sur un slot vide
                             setSelectedPlannedActivity(null)
@@ -742,13 +777,29 @@ export default function Planner({
                       if (!style) return null
                       const activity = activities.find(a => a.id === displayPlanned.activityId)
 
+                      const isSelected = selectedPlannedActivity?.id === planned.id
+                      const isCurrentlyResizing = isResizing && isSelected
+
                       return (
                         <div
                           key={planned.id}
-                          draggable={false}
+                          draggable={!isCurrentlyResizing}
+                          onDragStart={(e) => {
+                            if (isCurrentlyResizing) {
+                              e.preventDefault()
+                              return
+                            }
+                            handlePlannedActivityDragStart(e, planned)
+                          }}
+                          onDragEnd={() => {
+                            setDraggedPlannedActivity(null)
+                            setHoveredSlot(null)
+                          }}
+                          onDragOver={(e) => handleActivityDragOver(e, day, planned.id)}
+                          onDrop={(e) => handleActivityDrop(e, day, planned.id)}
                           style={{
                             ...style,
-                            cursor: 'pointer',
+                            cursor: isCurrentlyResizing ? 'ns-resize' : 'move',
                           }}
                           className="flex flex-col justify-center relative"
                           title={activity?.title}
@@ -764,10 +815,40 @@ export default function Planner({
                             }
                           }}
                         >
+                          {/* Poignée de redimensionnement en haut */}
+                          {isSelected && activity && (
+                            <div
+                              className="absolute left-1/2 transform -translate-x-1/2 cursor-ns-resize z-20"
+                              onMouseDown={(e) => handleResizeStart(e, planned, 'top')}
+                              style={{
+                                top: '-3px',
+                                width: '40px',
+                                height: '6px',
+                                backgroundColor: getTextColor(getColorHex(activity.color)),
+                                borderRadius: '3px',
+                              }}
+                            />
+                          )}
+                          
                           <div className="font-medium truncate">{activity?.title}</div>
                           <div className="text-xs opacity-90">
                             {displayPlanned.startTime} - {displayPlanned.endTime}
                           </div>
+                          
+                          {/* Poignée de redimensionnement en bas */}
+                          {isSelected && activity && (
+                            <div
+                              className="absolute left-1/2 transform -translate-x-1/2 cursor-ns-resize z-20"
+                              onMouseDown={(e) => handleResizeStart(e, planned, 'bottom')}
+                              style={{
+                                bottom: '-3px',
+                                width: '40px',
+                                height: '6px',
+                                backgroundColor: getTextColor(getColorHex(activity.color)),
+                                borderRadius: '3px',
+                              }}
+                            />
+                          )}
                         </div>
                       )
                     })
@@ -775,10 +856,16 @@ export default function Planner({
 
                   {/* Afficher les activités planifiées (scheduled) - uniquement en mode routine */}
                   {mode === 'routine' && (() => {
-                    // En mode routine, on affiche uniquement les scheduledActivities basées sur dayOfWeek
-                    // Pas besoin de vérifier les plannedActivities car elles n'existent pas en mode routine
-                    const dayScheduled = scheduledActivities
-                      .filter(s => s.dayOfWeek === dayOfWeek)
+                    // En mode routine, on affiche les scheduledActivities basées sur dayOfWeek
+                    // Mais pour les activités quotidiennes (daily avec frequency < 7), on les affiche sur tous les jours
+                    const dayScheduled = scheduledActivities.filter(s => {
+                      // Si c'est une activité quotidienne avec frequency < 7, l'afficher sur tous les jours
+                      if (s.periodicity?.unit === 'daily' && s.periodicity.frequency < 7) {
+                        return true
+                      }
+                      // Sinon, filtrer par dayOfWeek
+                      return s.dayOfWeek === dayOfWeek
+                    })
                     
                     // Utiliser les activités mises à jour pour le calcul des chevauchements
                     const dayScheduledUpdated: ScheduledActivity[] = dayScheduled
@@ -816,7 +903,9 @@ export default function Planner({
                       const start = timeToMinutes(displayScheduled.startTime)
                       const end = timeToMinutes(displayScheduled.endTime)
                       const duration = end - start
-                      const top = (start / 60) * SLOT_HEIGHT
+                      // Ajuster la position en soustrayant les heures avant START_HOUR
+                      const startMinutesFromStart = start - (START_HOUR * 60)
+                      const top = (startMinutesFromStart / 60) * SLOT_HEIGHT
                       const height = (duration / 60) * SLOT_HEIGHT
 
                       const activity = activities.find(a => a.id === displayScheduled.activityId)
@@ -894,6 +983,28 @@ export default function Planner({
                             />
                           )}
                           
+                          {/* Bouton de suppression */}
+                          {isSelected && activity && onScheduledActivityDelete && scheduled.id !== undefined && (
+                            <button
+                              className="absolute top-1 right-1 z-30 rounded-full w-5 h-5 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${activity.title}" de la routine ?`)) {
+                                  onScheduledActivityDelete(scheduled.id!)
+                                  setSelectedScheduledActivity(null)
+                                }
+                              }}
+                              style={{
+                                backgroundColor: 'rgba(239, 68, 68, 0.9)',
+                                color: '#FFFFFF',
+                                border: '1px solid rgba(255, 255, 255, 0.3)',
+                              }}
+                              title="Supprimer de la routine"
+                            >
+                              ×
+                            </button>
+                          )}
+                          
                           <div className="font-medium truncate">{activity.title}</div>
                           <div className="text-xs opacity-90">
                             {displayScheduled.startTime} - {displayScheduled.endTime}
@@ -924,10 +1035,11 @@ export default function Planner({
                     return previewStyle ? <div key="hover-preview" style={previewStyle} /> : null
                   })()}
 
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
 

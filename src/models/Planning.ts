@@ -3,6 +3,7 @@ import { Activity } from './Activity'
 export interface Periodicity {
   frequency: number
   unit: 'daily' | 'weekly' | 'monthly'
+  weekOfMonth?: number // 1-4 pour 1ère, 2ème, 3ème, 4ème semaine, -1 pour dernière semaine (uniquement pour monthly)
 }
 
 export interface ScheduledActivity {
