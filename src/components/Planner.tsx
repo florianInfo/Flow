@@ -50,6 +50,7 @@ export default function Planner({
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null)
   const [resizeStartY, setResizeStartY] = useState<number | null>(null)
   const [resizeStartTime, setResizeStartTime] = useState<string | null>(null)
+  const [resizeStartScrollTop, setResizeStartScrollTop] = useState<number | null>(null)
   const plannerRef = useRef<HTMLDivElement>(null)
 
   // Calculer le début de la semaine (lundi) - uniquement en mode calendrier
@@ -134,13 +135,11 @@ export default function Planner({
     const dayOfWeek = day.getDay()
     const startTime = minutesToTime(hour * 60 + minute)
 
-    // Vérifier si on drag une activité depuis la liste
-    const activityData = e.dataTransfer.getData('activity')
-    if (activityData) {
-      const activity: Activity = JSON.parse(activityData)
-      const endTime = minutesToTime(hour * 60 + minute + DEFAULT_ACTIVITY_DURATION) // Par défaut 15 minutes
+    // Utiliser d'abord l'état local (plus fiable que dataTransfer)
+    if (draggedActivity) {
+      const endTime = minutesToTime(hour * 60 + minute + DEFAULT_ACTIVITY_DURATION) // Par défaut 30 minutes
       const newScheduled: ScheduledActivity = {
-        activityId: activity.id!,
+        activityId: draggedActivity.id!,
         startTime,
         endTime,
         dayOfWeek,
@@ -154,9 +153,8 @@ export default function Planner({
     }
 
     // Vérifier si on drag une PlannedActivity existante
-    const plannedData = e.dataTransfer.getData('plannedActivity')
-    if (plannedData) {
-      const planned: PlannedActivity = JSON.parse(plannedData)
+    if (draggedPlannedActivity) {
+      const planned = draggedPlannedActivity
       
       // Si la plannedActivity a un scheduledActivityId, modifier la scheduledActivity source
       if (planned.scheduledActivityId) {
@@ -168,6 +166,7 @@ export default function Planner({
           const duration = end - start
           const endTime = minutesToTime(hour * 60 + minute + duration)
           
+          // Préserver toutes les propriétés de l'activité scheduled originale
           const updated: ScheduledActivity = {
             ...scheduled,
             startTime,
@@ -189,6 +188,7 @@ export default function Planner({
       const duration = end - start
       const endTime = minutesToTime(hour * 60 + minute + duration)
       
+      // Préserver toutes les propriétés de l'activité planned originale
       const updated: PlannedActivity = {
         ...planned,
         date: dateStr,
@@ -202,9 +202,8 @@ export default function Planner({
     }
 
     // Vérifier si on drag une ScheduledActivity existante
-    const scheduledData = e.dataTransfer.getData('scheduledActivity')
-    if (scheduledData) {
-      const scheduled: ScheduledActivity = JSON.parse(scheduledData)
+    if (draggedScheduledActivity) {
+      const scheduled = draggedScheduledActivity
       // Préserver la durée de l'activité existante
       const start = timeToMinutes(scheduled.startTime)
       const end = timeToMinutes(scheduled.endTime)
@@ -213,6 +212,7 @@ export default function Planner({
       
       // Pour les activités quotidiennes (daily avec frequency < 7), on ne change pas le dayOfWeek
       // car elles s'affichent sur tous les jours
+      // Préserver toutes les propriétés de l'activité scheduled originale
       const updated: ScheduledActivity = {
         ...scheduled,
         startTime,
@@ -226,6 +226,78 @@ export default function Planner({
       setDraggedScheduledActivity(null)
       setHoveredSlot(null)
       return
+    }
+
+    // Fallback : essayer de récupérer depuis dataTransfer (pour compatibilité)
+    const activityData = e.dataTransfer.getData('activity')
+    if (activityData) {
+      try {
+        const activity: Activity = JSON.parse(activityData)
+        const endTime = minutesToTime(hour * 60 + minute + DEFAULT_ACTIVITY_DURATION)
+        const newScheduled: ScheduledActivity = {
+          activityId: activity.id!,
+          startTime,
+          endTime,
+          dayOfWeek,
+        }
+        onScheduledActivityCreate?.(newScheduled, day)
+        setDraggedActivity(null)
+        setHoveredSlot(null)
+        return
+      } catch (error) {
+        console.error('Erreur lors de la désérialisation de l\'activité:', error)
+      }
+    }
+
+    const plannedData = e.dataTransfer.getData('plannedActivity')
+    if (plannedData) {
+      try {
+        const planned: PlannedActivity = JSON.parse(plannedData)
+        const dateStr = day.toISOString().split('T')[0]
+        const start = timeToMinutes(planned.startTime)
+        const end = timeToMinutes(planned.endTime)
+        const duration = end - start
+        const endTime = minutesToTime(hour * 60 + minute + duration)
+        
+        const updated: PlannedActivity = {
+          ...planned,
+          date: dateStr,
+          startTime,
+          endTime,
+        }
+        onPlannedActivityUpdate?.(updated)
+        setDraggedPlannedActivity(null)
+        setHoveredSlot(null)
+        return
+      } catch (error) {
+        console.error('Erreur lors de la désérialisation de la plannedActivity:', error)
+      }
+    }
+
+    const scheduledData = e.dataTransfer.getData('scheduledActivity')
+    if (scheduledData) {
+      try {
+        const scheduled: ScheduledActivity = JSON.parse(scheduledData)
+        const start = timeToMinutes(scheduled.startTime)
+        const end = timeToMinutes(scheduled.endTime)
+        const duration = end - start
+        const endTime = minutesToTime(hour * 60 + minute + duration)
+        
+        const updated: ScheduledActivity = {
+          ...scheduled,
+          startTime,
+          endTime,
+          ...(scheduled.periodicity?.unit === 'daily' && scheduled.periodicity.frequency < 7 
+            ? {} 
+            : { dayOfWeek }),
+        }
+        onScheduledActivityUpdate?.(updated)
+        setDraggedScheduledActivity(null)
+        setHoveredSlot(null)
+        return
+      } catch (error) {
+        console.error('Erreur lors de la désérialisation de la scheduledActivity:', error)
+      }
     }
   }
 
@@ -467,6 +539,12 @@ export default function Planner({
     e.stopPropagation()
     setIsResizing(edge)
     setResizeStartY(e.clientY)
+    // Stocker le scroll initial pour prendre en compte le scroll lors du redimensionnement
+    if (plannerRef.current) {
+      setResizeStartScrollTop(plannerRef.current.scrollTop)
+    } else {
+      setResizeStartScrollTop(0)
+    }
     if ('date' in activity) {
       setResizeStartTime(edge === 'top' ? activity.startTime : activity.endTime)
       setSelectedPlannedActivity(activity as PlannedActivity)
@@ -477,11 +555,34 @@ export default function Planner({
   }
 
   const handleResizeMove = (e: MouseEvent) => {
-    if (!isResizing || !resizeStartY || !resizeStartTime || !plannerRef.current) return
+    if (!isResizing || !resizeStartY || !resizeStartTime || !plannerRef.current || resizeStartScrollTop === null) return
 
     const rect = plannerRef.current.getBoundingClientRect()
-    // Le header est maintenant fixe et en dehors de la zone scrollable, donc headerHeight = 0
-    const relativeY = e.clientY - rect.top
+    
+    // Scroll automatique si la souris est proche des bords
+    const SCROLL_THRESHOLD = 50 // Distance en pixels du bord pour déclencher le scroll
+    const SCROLL_SPEED = 5 // Vitesse de scroll en pixels par frame
+    const mouseYRelativeToViewport = e.clientY - rect.top
+    
+    // Scroll vers le haut si la souris est proche du bord supérieur
+    if (mouseYRelativeToViewport < SCROLL_THRESHOLD && plannerRef.current.scrollTop > 0) {
+      const newScrollTop = Math.max(0, plannerRef.current.scrollTop - SCROLL_SPEED)
+      plannerRef.current.scrollTop = newScrollTop
+    }
+    // Scroll vers le bas si la souris est proche du bord inférieur
+    else if (mouseYRelativeToViewport > rect.height - SCROLL_THRESHOLD) {
+      const maxScroll = plannerRef.current.scrollHeight - plannerRef.current.clientHeight
+      if (plannerRef.current.scrollTop < maxScroll) {
+        const newScrollTop = Math.min(maxScroll, plannerRef.current.scrollTop + SCROLL_SPEED)
+        plannerRef.current.scrollTop = newScrollTop
+      }
+    }
+    
+    // Prendre en compte le scroll actuel pour calculer la position relative correcte
+    // e.clientY - rect.top donne la position dans la zone visible
+    // On ajoute scrollTop pour obtenir la position absolue dans le contenu scrollé
+    const currentScrollTop = plannerRef.current.scrollTop
+    const relativeY = e.clientY - rect.top + currentScrollTop
     const totalMinutes = (relativeY / SLOT_HEIGHT) * 60
     const hour = Math.floor(totalMinutes / 60) + START_HOUR
     const minute = Math.floor((totalMinutes % 60) / SLOT_MINUTES) * SLOT_MINUTES
@@ -571,6 +672,7 @@ export default function Planner({
     setIsResizing(null)
     setResizeStartY(null)
     setResizeStartTime(null)
+    setResizeStartScrollTop(null)
   }
 
   // Gérer les événements globaux pour le resize
@@ -595,7 +697,7 @@ export default function Planner({
       document.removeEventListener('mouseup', handleGlobalMouseUp)
       document.removeEventListener('mousemove', handleGlobalMouseMove)
     }
-  }, [isResizing, selectedPlannedActivity, selectedScheduledActivity, resizeStartY, resizeStartTime])
+  }, [isResizing, selectedPlannedActivity, selectedScheduledActivity, resizeStartY, resizeStartTime, resizeStartScrollTop])
 
   // Synchroniser le state local avec les props après une mise à jour
   useEffect(() => {
