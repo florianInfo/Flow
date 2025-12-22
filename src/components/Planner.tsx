@@ -539,6 +539,7 @@ export default function Planner({
     e.stopPropagation()
     setIsResizing(edge)
     setResizeStartY(e.clientY)
+    
     // Stocker le scroll initial pour prendre en compte le scroll lors du redimensionnement
     if (plannerRef.current) {
       setResizeStartScrollTop(plannerRef.current.scrollTop)
@@ -562,7 +563,7 @@ export default function Planner({
     // Scroll automatique si la souris est proche des bords
     const SCROLL_THRESHOLD = 50 // Distance en pixels du bord pour déclencher le scroll
     const SCROLL_SPEED = 5 // Vitesse de scroll en pixels par frame
-    const mouseYRelativeToViewport = e.clientY - rect.top
+    const mouseYRelativeToViewport = e.clientY - rect.top 
     
     // Scroll vers le haut si la souris est proche du bord supérieur
     if (mouseYRelativeToViewport < SCROLL_THRESHOLD && plannerRef.current.scrollTop > 0) {
@@ -586,6 +587,7 @@ export default function Planner({
     const totalMinutes = (relativeY / SLOT_HEIGHT) * 60
     const hour = Math.floor(totalMinutes / 60) + START_HOUR
     const minute = Math.floor((totalMinutes % 60) / SLOT_MINUTES) * SLOT_MINUTES
+
     
     if (hour < START_HOUR || hour > END_HOUR) return
 
@@ -741,7 +743,7 @@ export default function Planner({
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden pb-6">
       {/* Sélecteur d'activité - uniquement en mode routine */}
       {mode === 'routine' && (
         <div className="p-4 border-b bg-gray-50 flex-shrink-0">
