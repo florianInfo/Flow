@@ -2,9 +2,11 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { Activity } from '../models/Activity'
 import { ScheduledActivity, PlannedActivity } from '../models/Planning'
 import { getColorHex, getTextColor } from '../utils/ColorUtils'
+import { useAppSettings } from '../hooks/useAppSettings'
 
 type PlannerMode = 'routine' | 'calendrier'
 
+const DAYS_OF_WEEK = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 
 interface PlannerProps {
   activities: Activity[]
@@ -16,17 +18,49 @@ interface PlannerProps {
   onPlannedActivityUpdate?: (planned: PlannedActivity) => void
   currentWeek?: Date
   onWeekChange?: (weekStart: Date) => void
-  mode?: PlannerMode
   onActivityDoubleClick?: (activityId: number, scheduledActivityId?: number) => void
 }
 
-const START_HOUR = 6 // Heure de début (6h)
-const END_HOUR = 22 // Dernière heure affichée (22h)
-const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => i + START_HOUR) // 6 à 22 inclus
-const DAYS_OF_WEEK = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
-const SLOT_HEIGHT = 60 // Hauteur d'un slot d'une heure en pixels
-const SLOT_MINUTES = 15 // Granularité des slots (15 minutes)
-const DEFAULT_ACTIVITY_DURATION = 30 // minutes
+// Composant pour l'icône Planner (carnet de note)
+const PlannerIcon = ({ isActive }: { isActive: boolean }) => {
+  const color = isActive ? "#1f2937" : "#6b7280"
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Carnet de note */}
+      <rect x="5" y="4" width="14" height="17" rx="1.5" stroke={color} strokeWidth="1.5" fill="white"/>
+      {/* Spirale à gauche */}
+      <circle cx="5" cy="6" r="0.8" fill={color}/>
+      <circle cx="5" cy="9" r="0.8" fill={color}/>
+      <circle cx="5" cy="12" r="0.8" fill={color}/>
+      <circle cx="5" cy="15" r="0.8" fill={color}/>
+      <circle cx="5" cy="18" r="0.8" fill={color}/>
+      {/* Lignes de texte */}
+      <line x1="8" y1="7" x2="15" y2="7" stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="8" y1="10" x2="15" y2="10" stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="8" y1="13" x2="13" y2="13" stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="8" y1="16" x2="14" y2="16" stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+// Composant pour l'icône Calendrier
+const CalendarIcon = ({ isActive }: { isActive: boolean }) => {
+  const color = isActive ? "white" : "#6b7280"
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
+      <path d="M7.5 10.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
+      <path d="M12.5 10.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
+      <path d="M17.5 10.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
+      <path d="M7.5 14.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
+      <path d="M12.5 14.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
+      <path d="M17.5 14.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
+      <path d="M7.5 18.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
+      <path d="M12.5 18.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
+      <path d="M17.5 18.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
+      <path d="M21.5 3h-2.75a0.25 0.25 0 0 1 -0.25 -0.25V1a1 1 0 0 0 -2 0v4.75a0.75 0.75 0 0 1 -1.5 0V3.5a0.5 0.5 0 0 0 -0.5 -0.5H8.25A0.25 0.25 0 0 1 8 2.75V1a1 1 0 0 0 -2 0v4.75a0.75 0.75 0 0 1 -1.5 0V3.5A0.5 0.5 0 0 0 4 3H2.5a2 2 0 0 0 -2 2v17a2 2 0 0 0 2 2h19a2 2 0 0 0 2 -2V5a2 2 0 0 0 -2 -2Zm0 18.5a0.5 0.5 0 0 1 -0.5 0.5H3a0.5 0.5 0 0 1 -0.5 -0.5v-12A0.5 0.5 0 0 1 3 9h18a0.5 0.5 0 0 1 0.5 0.5Z" fill={color} strokeWidth="1"></path>
+    </svg>
+  )
+}
 
 export default function Planner({
   activities,
@@ -38,9 +72,39 @@ export default function Planner({
   onPlannedActivityUpdate,
   currentWeek = new Date(),
   onWeekChange,
-  mode = 'routine',
   onActivityDoubleClick,
 }: PlannerProps) {
+  const { settings } = useAppSettings()
+  
+  // Gestion interne du mode
+  const [mode, setMode] = useState<PlannerMode>('routine')
+  const [internalCurrentWeek, setInternalCurrentWeek] = useState<Date>(currentWeek)
+  
+  // Synchroniser avec currentWeek si fourni en prop
+  useEffect(() => {
+    if (currentWeek) {
+      setInternalCurrentWeek(currentWeek)
+    }
+  }, [currentWeek])
+  
+  // Gérer le changement de semaine en interne
+  const handleInternalWeekChange = (weekStart: Date) => {
+    setInternalCurrentWeek(weekStart)
+    onWeekChange?.(weekStart)
+  }
+  
+  // Paramètres dynamiques du planner
+  const START_HOUR = settings.planner.startHour
+  const END_HOUR = settings.planner.endHour
+  const SLOT_HEIGHT = settings.planner.slotHeight
+  const SLOT_MINUTES = settings.planner.slotMinutes
+  const DEFAULT_ACTIVITY_DURATION = settings.planner.defaultActivityDuration
+  
+  // Calculer les heures dynamiquement
+  const HOURS = useMemo(() => {
+    return Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => i + START_HOUR)
+  }, [START_HOUR, END_HOUR])
+
   const [draggedActivity, setDraggedActivity] = useState<Activity | null>(null) // Activité draguée depuis la liste
   const [draggedPlannedActivity, setDraggedPlannedActivity] = useState<PlannedActivity | null>(null) // Activité planifiée draguée
   const [draggedScheduledActivity, setDraggedScheduledActivity] = useState<ScheduledActivity | null>(null) // Activité scheduled draguée
@@ -59,11 +123,11 @@ export default function Planner({
       // En mode routine, on n'utilise pas de dates réelles
       return null
     }
-    const start = new Date(currentWeek)
+    const start = new Date(internalCurrentWeek)
     const day = start.getDay()
     const diff = start.getDate() - day + (day === 0 ? -6 : 1) // Ajuster pour lundi
     return new Date(start.setDate(diff))
-  }, [currentWeek, mode])
+  }, [internalCurrentWeek, mode])
 
   // Générer les jours de la semaine
   const weekDays = useMemo(() => {
@@ -964,15 +1028,22 @@ export default function Planner({
     if (!weekStart) return
     const prevWeek = new Date(weekStart)
     prevWeek.setDate(prevWeek.getDate() - 7)
-    onWeekChange?.(prevWeek)
+    handleInternalWeekChange(prevWeek)
   }
 
   const handleNextWeek = () => {
     if (!weekStart) return
     const nextWeek = new Date(weekStart)
     nextWeek.setDate(nextWeek.getDate() + 7)
-    onWeekChange?.(nextWeek)
+    handleInternalWeekChange(nextWeek)
   }
+  
+  // Réinitialiser la semaine quand on passe en mode routine
+  useEffect(() => {
+    if (mode === 'routine') {
+      setInternalCurrentWeek(new Date())
+    }
+  }, [mode])
 
   return (
     <div className="flex flex-col h-full overflow-hidden pb-6">
@@ -1009,9 +1080,55 @@ export default function Planner({
         <div className="flex-1 overflow-auto" ref={plannerRef} style={{ minHeight: 0 }}>
           {/* Header sticky avec les jours */}
           <div className="flex border-b sticky top-0 z-20 flex-shrink-0" style={{ boxSizing: 'border-box', width: '100%', background: 'linear-gradient(to bottom, rgba(234, 221, 205, 1), rgba(234, 221, 205, 0.25))' }}>
-            {/* Colonne des heures - header vide */}
-            <div className="w-20 flex-shrink-0 border-r" style={{ boxSizing: 'border-box', background: 'linear-gradient(to bottom, rgba(234, 221, 205, 1), rgba(234, 221, 205, 0.25))' }}>
-              <div className="h-12"></div>
+            {/* Colonne des heures - sélecteur de mode */}
+            <div className="w-20 flex-shrink-0 border-r relative" style={{ boxSizing: 'border-box', background: 'linear-gradient(to bottom, rgba(234, 221, 205, 1), rgba(234, 221, 205, 0.25))' }}>
+              <div className="h-12 grid grid-cols-2 grid-rows-2 relative" style={{ border: 'none' }}>
+                {/* Barre diagonale traversant les cellules haut droite et bas gauche */}
+                <div 
+                  className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(to bottom right, transparent calc(50% - 1px), #9ca3af calc(50% - 1px), #9ca3af calc(50% + 1px), transparent calc(50% + 1px))',
+                  }}
+                />
+                
+                {/* Cellule haut gauche - Mode Routine */}
+                <div className="flex items-center justify-center relative z-10">
+                  <button
+                    onClick={() => setMode('routine')}
+                    className={`flex items-center justify-center transition-all rounded ${
+                      mode === 'routine' 
+                        ? 'bg-gray-700 text-white' 
+                        : 'bg-transparent hover:bg-gray-200'
+                    }`}
+                    style={{ width: '24px', height: '24px' }}
+                    title="Mode Routine"
+                  >
+                    <PlannerIcon isActive={mode === 'routine'} />
+                  </button>
+                </div>
+                
+                {/* Cellule haut droite - vide (barre diagonale visible) */}
+                <div className="relative z-10"></div>
+                
+                {/* Cellule bas gauche - vide (barre diagonale visible) */}
+                <div className="relative z-10"></div>
+                
+                {/* Cellule bas droite - Mode Calendrier */}
+                <div className="flex items-center justify-center relative z-10">
+                  <button
+                    onClick={() => setMode('calendrier')}
+                    className={`flex items-center justify-center transition-all rounded ${
+                      mode === 'calendrier' 
+                        ? 'bg-gray-700 text-white' 
+                        : 'bg-transparent hover:bg-gray-200'
+                    }`}
+                    style={{ width: '24px', height: '24px' }}
+                    title="Mode Calendrier"
+                  >
+                    <CalendarIcon isActive={mode === 'calendrier'} />
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* En-têtes des jours */}

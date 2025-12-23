@@ -4,6 +4,7 @@ import { ScheduledActivity, PlannedActivity, User } from './models/Planning'
 import ActivityBadge from './components/ActivityBadge'
 import ActivityModal from './components/ActivityModal'
 import Planner from './components/Planner'
+import Admin from './components/Admin'
 import { ActivityDelete } from './utils/ActivityDelete'
 import { logApiRequest } from './utils/ApiLogger'
 import { generatePlannedActivities } from './utils/PlannedActivityGenerator'
@@ -12,12 +13,10 @@ interface ActivitiesData {
   activities: Activity[]
 }
 
-type ViewMode = 'activities' | 'planner'
-type PlannerMode = 'routine' | 'calendrier'
+type ViewMode = 'activities' | 'planner' | 'admin'
 
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('activities')
-  const [plannerMode, setPlannerMode] = useState<PlannerMode>('routine')
   const [user, setUser] = useState<User>({
     id: 1,
     activities: [],
@@ -31,12 +30,6 @@ function App() {
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date())
   const [currentCalendarId] = useState<number>(1)
 
-  // Réinitialiser la semaine courante quand on passe en mode routine
-  useEffect(() => {
-    if (viewMode === 'planner' && plannerMode === 'routine') {
-      setCurrentWeek(new Date())
-    }
-  }, [plannerMode, viewMode])
 
   // Charger le user depuis localStorage au démarrage
   useEffect(() => {
@@ -620,30 +613,16 @@ function App() {
             >
               Planner
             </button>
-            {viewMode === 'planner' && (
-              <div className="flex gap-2 ml-4">
-                <button
-                  onClick={() => setPlannerMode('routine')}
-                  className={`px-4 py-2 rounded transition-colors ${
-                    plannerMode === 'routine'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  Routine
-                </button>
-                <button
-                  onClick={() => setPlannerMode('calendrier')}
-                  className={`px-4 py-2 rounded transition-colors ${
-                    plannerMode === 'calendrier'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  Calendrier
-                </button>
-              </div>
-            )}
+            <button
+              onClick={() => setViewMode('admin')}
+              className={`px-4 py-2 rounded transition-colors ${
+                viewMode === 'admin'
+                  ? 'bg-gray-700 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Admin
+            </button>
           </nav>
         </div>
       </header>
@@ -673,6 +652,8 @@ function App() {
             + Créer une activité
           </button>
         </main>
+      ) : viewMode === 'admin' ? (
+        <Admin />
       ) : (
         <div className="flex-1 min-h-0 overflow-hidden">
             <Planner
@@ -685,7 +666,6 @@ function App() {
               onPlannedActivityUpdate={handlePlannedActivityUpdate}
               currentWeek={currentWeek}
               onWeekChange={handleWeekChange}
-              mode={plannerMode}
               onActivityDoubleClick={(activityId, scheduledActivityId) => {
                 const activity = user.activities.find(a => a.id === activityId)
                 if (activity) {
@@ -717,7 +697,7 @@ function App() {
         onSave={handleSaveActivity}
         onDelete={handleDeleteActivity}
         onActivityClick={handleActivityClickInModal}
-        readOnly={viewMode === 'planner' && plannerMode === 'calendrier'}
+        readOnly={false}
         scheduledActivity={selectedScheduledActivity}
         onScheduledActivityUpdate={handleScheduledActivityUpdate}
       />
