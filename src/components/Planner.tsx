@@ -5,6 +5,7 @@ import { getColorHex, getTextColor } from '../utils/ColorUtils'
 
 type PlannerMode = 'routine' | 'calendrier'
 
+
 interface PlannerProps {
   activities: Activity[]
   scheduledActivities: ScheduledActivity[]
@@ -12,7 +13,6 @@ interface PlannerProps {
   onScheduledActivityCreate?: (scheduled: ScheduledActivity, day?: Date) => void
   onScheduledActivityUpdate?: (scheduled: ScheduledActivity) => void
   onScheduledActivityDelete?: (scheduledActivityId: number) => void
-  onPlannedActivityCreate?: (planned: PlannedActivity) => void
   onPlannedActivityUpdate?: (planned: PlannedActivity) => void
   currentWeek?: Date
   onWeekChange?: (weekStart: Date) => void
