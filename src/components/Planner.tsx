@@ -1,12 +1,13 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Activity } from '../models/Activity'
 import { ScheduledActivity, PlannedActivity } from '../models/Planning'
-import { getColorHex, getTextColor } from '../utils/ColorUtils'
 import { useAppSettings } from '../hooks/useAppSettings'
 import { timeToMinutes, minutesToTime, adjustTimeBounds } from '../utils/TimeUtils'
 import { getWeekStart, generateWeekDays, generateRoutineWeekDays } from '../utils/DateUtils'
-import { getSlotFromMousePosition, PlannerDimensions, detectScrollZone, validateDuration, calculateActivityPosition } from '../utils/PlannerPositionUtils'
-import { getOverlappingActivities } from '../utils/ActivityOverlapUtils'
+import { getSlotFromMousePosition, PlannerDimensions, detectScrollZone, validateDuration } from '../utils/PlannerPositionUtils'
+import { preparePlannedActivitiesForDay, prepareScheduledActivitiesForDay } from '../utils/PlannerActivityUtils'
+import { calculateHoverPreviewStyle } from '../utils/PlannerStyleUtils'
+import ActivityBlock from './ActivityBlock'
 import PlannerIcon from './PlannerIcon'
 import CalendarIcon from './CalendarIcon'
 
@@ -396,104 +397,6 @@ export default function Planner({
   }
 
 
-  // Calculer la position et la hauteur d'une activité planifiée
-  const getActivityStyle = (planned: PlannedActivity, day: Date, allPlanned: PlannedActivity[]): React.CSSProperties | null => {
-    const dateStr = day.toISOString().split('T')[0]
-    if (planned.date !== dateStr) return null
-
-    const activity = activities.find(a => a.id === planned.activityId)
-    if (!activity) return null
-
-    // Calculer la position top et height
-    const { top, height } = calculateActivityPosition(planned.startTime, planned.endTime, START_HOUR, SLOT_HEIGHT)
-
-    // Calculer la position et largeur en fonction des chevauchements
-    const positions = getOverlappingActivities(allPlanned, day, timeToMinutes)
-    const position = positions.get(planned.id || 0) || { left: 0, width: 100 }
-    
-    const isSelected = selectedPlannedActivity?.id === planned.id
-
-    return {
-      position: 'absolute',
-      top: `${top}px`,
-      height: `${height}px`,
-      left: `${position.left}%`,
-      width: `${position.width}%`,
-      backgroundColor: getColorHex(activity.color),
-      color: getTextColor(getColorHex(activity.color)),
-      borderRadius: '4px',
-      padding: '4px 8px',
-      fontSize: '12px',
-      overflow: 'hidden',
-      zIndex: isSelected ? 15 : 10,
-      cursor: 'pointer',
-      marginLeft: position.left > 0 ? '2px' : '0',
-      marginRight: position.left + position.width < 100 ? '2px' : '0',
-      boxSizing: 'border-box',
-      borderWidth: isSelected ? '2px' : '0',
-      borderStyle: isSelected ? 'solid' : 'none',
-      borderColor: isSelected ? getTextColor(getColorHex(activity.color)) : 'transparent',
-    }
-  }
-
-  // Calculer le style du hover preview pour une colonne de jour
-  const getHoverPreviewStyle = (day: Date): React.CSSProperties | null => {
-    // Vérifier si on est en train de draguer quelque chose
-    if (!draggedActivity && !draggedPlannedActivity && !draggedScheduledActivity) {
-      return null
-    }
-
-    // Vérifier si ce jour est dans la zone de hover
-    if (!hoveredSlot || hoveredSlot.day.toDateString() !== day.toDateString()) {
-      return null
-    }
-
-    let activity: Activity | null = null
-    let duration = DEFAULT_ACTIVITY_DURATION // Par défaut 30 minutes
-
-    if (draggedActivity) {
-      activity = draggedActivity
-      duration = DEFAULT_ACTIVITY_DURATION // Utiliser la durée par défaut pour une nouvelle activité
-    } else if (draggedPlannedActivity) {
-      activity = activities.find(a => a.id === draggedPlannedActivity.activityId) || null
-      // Utiliser la durée de l'activité existante
-      const start = timeToMinutes(draggedPlannedActivity.startTime)
-      const end = timeToMinutes(draggedPlannedActivity.endTime)
-      duration = end - start
-    } else if (draggedScheduledActivity) {
-      activity = activities.find(a => a.id === draggedScheduledActivity.activityId) || null
-      // Utiliser la durée de l'activité existante
-      const start = timeToMinutes(draggedScheduledActivity.startTime)
-      const end = timeToMinutes(draggedScheduledActivity.endTime)
-      duration = end - start
-    }
-
-    if (!activity) return null
-
-    // Calculer la position et la hauteur du preview en utilisant adjustTimeBounds
-    const adjusted = adjustTimeBounds(hoveredSlot.hour, hoveredSlot.minute, duration, START_HOUR, END_HOUR)
-    if (!adjusted) return null
-    
-    const { startMinutes: previewStartMinutes } = adjusted
-    const previewTime = minutesToTime(previewStartMinutes)
-    const previewEndTime = minutesToTime(previewStartMinutes + duration)
-    const { top, height } = calculateActivityPosition(previewTime, previewEndTime, START_HOUR, SLOT_HEIGHT)
-
-    return {
-      position: 'absolute',
-      top: `${top}px`,
-      height: `${height}px`,
-      left: '0',
-      right: '0',
-      backgroundColor: getColorHex(activity.color),
-      opacity: 0.6,
-      borderRadius: '4px',
-      zIndex: 30,
-      pointerEvents: 'none',
-      border: `2px dashed ${getTextColor(getColorHex(activity.color))}`,
-      boxSizing: 'border-box',
-    }
-  }
 
   // Gérer le redimensionnement d'une activité
   const handleResizeStart = (e: React.MouseEvent, activity: PlannedActivity | ScheduledActivity, edge: 'top' | 'bottom') => {
@@ -891,235 +794,108 @@ export default function Planner({
                   })}
 
                   {/* Afficher les activités planifiées - uniquement en mode calendrier */}
-                  {mode === 'calendrier' && (() => {
-                    const dateStr = day.toISOString().split('T')[0]
-                    const dayPlanned = plannedActivities.filter(p => p.date === dateStr)
-                    
-                    // Utiliser les activités mises à jour pour le calcul des chevauchements
-                    const dayPlannedUpdated: PlannedActivity[] = dayPlanned.map(p =>
-                      (selectedPlannedActivity && selectedPlannedActivity.id === p.id) ? selectedPlannedActivity : p
-                    )
-                    
-                    return dayPlanned.map(planned => {
-                      // Utiliser l'activité sélectionnée mise à jour si elle correspond
-                      const displayPlanned: PlannedActivity = (selectedPlannedActivity && selectedPlannedActivity.id === planned.id) 
-                        ? selectedPlannedActivity 
-                        : planned
-                      
-                      const style = getActivityStyle(displayPlanned, day, dayPlannedUpdated)
-                      if (!style) return null
-                      const activity = activities.find(a => a.id === displayPlanned.activityId)
-
-                      return (
-                        <div
-                          key={planned.id}
-                          draggable={false}
-                          style={{
-                            ...style,
-                            cursor: 'default',
-                          }}
-                          className="flex flex-col justify-center relative"
-                          title={activity?.title}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedPlannedActivity(planned)
-                            setSelectedScheduledActivity(null)
-                          }}
-                          onDoubleClick={(e) => {
-                            e.stopPropagation()
-                            if (activity?.id && onActivityDoubleClick) {
-                              onActivityDoubleClick(activity.id, planned.scheduledActivityId, mode)
-                            }
-                          }}
-                        >
-                          <div className="font-medium truncate">{activity?.title}</div>
-                          <div className="text-xs opacity-90">
-                            {displayPlanned.startTime} - {displayPlanned.endTime}
-                          </div>
-                        </div>
-                      )
-                    })
-                  })()}
+                  {mode === 'calendrier' && preparePlannedActivitiesForDay(
+                    plannedActivities,
+                    day,
+                    selectedPlannedActivity,
+                    activities,
+                    START_HOUR,
+                    SLOT_HEIGHT
+                  ).map(({ planned, activity, position, isSelected }) => (
+                    <ActivityBlock
+                      key={planned.id}
+                      activity={activity}
+                      planned={planned}
+                      position={position}
+                      isSelected={isSelected}
+                      mode={mode}
+                      onSelect={(e) => {
+                        e.stopPropagation()
+                        setSelectedPlannedActivity(planned)
+                        setSelectedScheduledActivity(null)
+                      }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation()
+                        if (activity.id && onActivityDoubleClick) {
+                          onActivityDoubleClick(activity.id, planned.scheduledActivityId, mode)
+                        }
+                      }}
+                      style={{ cursor: 'default' }}
+                    />
+                  ))}
 
                   {/* Afficher les activités planifiées (scheduled) - uniquement en mode routine */}
-                  {mode === 'routine' && (() => {
-                    // En mode routine, on affiche les scheduledActivities basées sur dayOfWeek
-                    // Mais pour les activités quotidiennes (daily avec frequency < 7), on les affiche sur tous les jours
-                    const dayScheduled = scheduledActivities.filter(s => {
-                      // Si c'est une activité quotidienne avec frequency < 7, l'afficher sur tous les jours
-                      if (s.periodicity?.unit === 'daily' && s.periodicity.frequency < 7) {
-                        return true
-                      }
-                      // Sinon, filtrer par dayOfWeek
-                      return s.dayOfWeek === dayOfWeek
-                    })
-                    
-                    // Utiliser les activités mises à jour pour le calcul des chevauchements
-                    const dayScheduledUpdated: ScheduledActivity[] = dayScheduled
-                      .map(s =>
-                        (selectedScheduledActivity && selectedScheduledActivity.id === s.id) 
-                          ? selectedScheduledActivity 
-                          : s
-                      )
-                      .filter((s): s is ScheduledActivity => s !== null)
-                    
-                    // Convertir les scheduled en "planned" pour le calcul de chevauchement
-                    // En mode routine, on utilise une date fictive pour la structure (mais elle n'est pas affichée)
-                    const dateStr = day.toISOString().split('T')[0]
-                    const scheduledAsPlanned: PlannedActivity[] = dayScheduledUpdated.map(s => ({
-                      id: s.id,
-                      activityId: s.activityId,
-                      date: dateStr,
-                      startTime: s.startTime,
-                      endTime: s.endTime,
-                      scheduledActivityId: s.id
-                    }))
-                    
-                    // En mode routine, on n'a que les scheduled, pas de planned
-                    const allActivitiesForDay: PlannedActivity[] = scheduledAsPlanned
-                    
-                    const positions = getOverlappingActivities(allActivitiesForDay, day, timeToMinutes)
-                    
-                    return dayScheduledUpdated.map(scheduled => {
-                      // Utiliser l'activité sélectionnée mise à jour si elle correspond
-                      const displayScheduled: ScheduledActivity = 
-                        (selectedScheduledActivity && selectedScheduledActivity.id === scheduled.id) 
-                          ? selectedScheduledActivity 
-                          : scheduled
-                      
-                      const start = timeToMinutes(displayScheduled.startTime)
-                      const end = timeToMinutes(displayScheduled.endTime)
-                      const duration = end - start
-                      // Ajuster la position en soustrayant les heures avant START_HOUR
-                      const startMinutesFromStart = start - (START_HOUR * 60)
-                      const top = (startMinutesFromStart / 60) * SLOT_HEIGHT
-                      const height = (duration / 60) * SLOT_HEIGHT
-
-                      const activity = activities.find(a => a.id === displayScheduled.activityId)
-                      if (!activity) return null
-
-                      const position = positions.get(scheduled.id || 0) || { left: 0, width: 100 }
-
-                      const isSelected = selectedScheduledActivity?.id === scheduled.id
-                      const isCurrentlyResizing = isResizing && isSelected
-
-                      return (
-                        <div
-                          key={scheduled.id}
-                          draggable={!isCurrentlyResizing}
-                          onDragStart={(e) => {
-                            if (isCurrentlyResizing) {
-                              e.preventDefault()
-                              return
-                            }
-                            handleScheduledActivityDragStart(e, scheduled)
-                          }}
-                          onDragEnd={() => {
-                            setDraggedScheduledActivity(null)
-                            setHoveredSlot(null)
-                            setScrollCursor(null)
-                          }}
-                          onDragOver={(e) => handleActivityDragOver(e, day, scheduled.id)}
-                          onDrop={(e) => handleActivityDrop(e, day, scheduled.id)}
-                          style={{
-                            position: 'absolute',
-                            top: `${top}px`,
-                            height: `${height}px`,
-                            left: `${position.left}%`,
-                            width: `${position.width}%`,
-                            backgroundColor: getColorHex(activity.color),
-                            color: getTextColor(getColorHex(activity.color)),
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            fontSize: '12px',
-                            opacity: 0.7,
-                            borderWidth: isSelected ? '2px' : '1px',
-                            borderStyle: isSelected ? 'solid' : 'dashed',
-                            borderColor: getTextColor(getColorHex(activity.color)),
-                            zIndex: isSelected ? 15 : 5,
-                            cursor: isCurrentlyResizing ? 'ns-resize' : 'move',
-                            marginLeft: position.left > 0 ? '2px' : '0',
-                            marginRight: position.left + position.width < 100 ? '2px' : '0',
-                            boxSizing: 'border-box',
-                          }}
-                          className="flex flex-col justify-center relative"
-                          title={`${activity.title} (récurrent)`}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedScheduledActivity(scheduled)
-                            setSelectedPlannedActivity(null)
-                          }}
-                          onDoubleClick={(e) => {
-                            e.stopPropagation()
-                            if (activity.id && onActivityDoubleClick) {
-                              onActivityDoubleClick(activity.id, scheduled.id, mode)
-                            }
-                          }}
-                        >
-                          {/* Poignée de redimensionnement en haut */}
-                          {isSelected && activity && (
-                            <div
-                              className="absolute left-1/2 transform -translate-x-1/2 cursor-ns-resize z-20"
-                              onMouseDown={(e) => handleResizeStart(e, scheduled, 'top')}
-                              style={{
-                                top: '-3px',
-                                width: '40px',
-                                height: '6px',
-                                backgroundColor: getTextColor(getColorHex(activity.color)),
-                                borderRadius: '3px',
-                              }}
-                            />
-                          )}
-                          
-                          {/* Bouton de suppression */}
-                          {isSelected && activity && onScheduledActivityDelete && scheduled.id !== undefined && (
-                            <button
-                              className="absolute top-1 right-1 z-30 rounded-full w-5 h-5 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${activity.title}" de la routine ?`)) {
-                                  onScheduledActivityDelete(scheduled.id!)
-                                  setSelectedScheduledActivity(null)
-                                }
-                              }}
-                              style={{
-                                backgroundColor: 'rgba(239, 68, 68, 0.9)',
-                                color: '#FFFFFF',
-                                border: '1px solid rgba(255, 255, 255, 0.3)',
-                              }}
-                              title="Supprimer de la routine"
-                            >
-                              ×
-                            </button>
-                          )}
-                          
-                          <div className="font-medium truncate">{activity.title}</div>
-                          <div className="text-xs opacity-90">
-                            {displayScheduled.startTime} - {displayScheduled.endTime}
-                          </div>
-                          
-                          {/* Poignée de redimensionnement en bas */}
-                          {isSelected && activity && (
-                            <div
-                              className="absolute left-1/2 transform -translate-x-1/2 cursor-ns-resize z-20"
-                              onMouseDown={(e) => handleResizeStart(e, scheduled, 'bottom')}
-                              style={{
-                                bottom: '-3px',
-                                width: '40px',
-                                height: '6px',
-                                backgroundColor: getTextColor(getColorHex(activity.color)),
-                                borderRadius: '3px',
-                              }}
-                            />
-                          )}
-                        </div>
-                      )
-                    })
-                  })()}
+                  {mode === 'routine' && prepareScheduledActivitiesForDay(
+                    scheduledActivities,
+                    day,
+                    dayOfWeek,
+                    selectedScheduledActivity,
+                    activities,
+                    START_HOUR,
+                    SLOT_HEIGHT
+                  ).map(({ scheduled, activity, position, isSelected }) => {
+                    const isCurrentlyResizing = isResizing && isSelected
+                    return (
+                      <ActivityBlock
+                        key={scheduled.id}
+                        activity={activity}
+                        scheduled={scheduled}
+                        position={position}
+                        isSelected={isSelected}
+                        isResizing={isCurrentlyResizing || undefined}
+                        mode={mode}
+                        onSelect={(e) => {
+                          e.stopPropagation()
+                          setSelectedScheduledActivity(scheduled)
+                          setSelectedPlannedActivity(null)
+                        }}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation()
+                          if (activity.id && onActivityDoubleClick) {
+                            onActivityDoubleClick(activity.id, scheduled.id, mode)
+                          }
+                        }}
+                        onDragStart={(e) => {
+                          if (isCurrentlyResizing) {
+                            e.preventDefault()
+                            return
+                          }
+                          handleScheduledActivityDragStart(e, scheduled)
+                        }}
+                        onDragEnd={() => {
+                          setDraggedScheduledActivity(null)
+                          setHoveredSlot(null)
+                          setScrollCursor(null)
+                        }}
+                        onDragOver={(e) => handleActivityDragOver(e, day, scheduled.id)}
+                        onDrop={(e) => handleActivityDrop(e, day, scheduled.id)}
+                        onResizeStart={(e, edge) => handleResizeStart(e, scheduled, edge)}
+                        onDelete={() => {
+                          if (scheduled.id !== undefined && onScheduledActivityDelete) {
+                            onScheduledActivityDelete(scheduled.id)
+                            setSelectedScheduledActivity(null)
+                          }
+                        }}
+                      />
+                    )
+                  })}
 
                   {/* Preview du hover (affiché après toutes les activités pour être au-dessus) */}
                   {(() => {
-                    const previewStyle = getHoverPreviewStyle(day)
+                    const previewStyle = calculateHoverPreviewStyle(
+                      day,
+                      hoveredSlot,
+                      draggedActivity,
+                      draggedPlannedActivity,
+                      draggedScheduledActivity,
+                      activities,
+                      DEFAULT_ACTIVITY_DURATION,
+                      START_HOUR,
+                      END_HOUR,
+                      SLOT_HEIGHT,
+                      timeToMinutes,
+                      minutesToTime
+                    )
                     return previewStyle ? <div key="hover-preview" style={previewStyle} /> : null
                   })()}
 
