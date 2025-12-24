@@ -5,6 +5,7 @@ import ActivityBadge from './components/ActivityBadge'
 import ActivityModal from './components/ActivityModal'
 import Planner from './components/Planner'
 import Admin from './components/Admin'
+import SearchActivitiesPanel from './components/SearchActivitiesPanel'
 import { ActivityDelete } from './utils/ActivityDelete'
 import { logApiRequest } from './utils/ApiLogger'
 import { generatePlannedActivities } from './utils/PlannedActivityGenerator'
@@ -29,6 +30,9 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date())
   const [currentCalendarId] = useState<number>(1)
+  const [plannerMode, setPlannerMode] = useState<'routine' | 'calendrier'>('routine')
+  const [isActivitiesPanelOpen, setIsActivitiesPanelOpen] = useState(true)
+  const [draggedActivity, setDraggedActivity] = useState<Activity | null>(null)
 
 
   // Charger le user depuis localStorage au démarrage
@@ -655,7 +659,37 @@ function App() {
       ) : viewMode === 'admin' ? (
         <Admin />
       ) : (
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          {/* Panneau collapsable pour les activités */}
+          <div className="border-b bg-gray-50">
+            <button
+              onClick={() => setIsActivitiesPanelOpen(!isActivitiesPanelOpen)}
+              className="w-full px-4 py-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
+            >
+              <span className="font-medium">Activités disponibles</span>
+              <span className="text-gray-500">
+                {isActivitiesPanelOpen ? '▼' : '▶'}
+              </span>
+            </button>
+            {isActivitiesPanelOpen && (
+              <div className="border-t">
+                <SearchActivitiesPanel
+                  activities={user.activities}
+                  onDragStart={(e, activity) => {
+                    e.dataTransfer.effectAllowed = 'move'
+                    e.dataTransfer.setData('activity', JSON.stringify(activity))
+                    setDraggedActivity(activity)
+                  }}
+                  onDragEnd={() => {
+                    setDraggedActivity(null)
+                  }}
+                  disabled={plannerMode === 'calendrier'}
+                />
+              </div>
+            )}
+          </div>
+          
+          <div className="flex-1 min-h-0 overflow-hidden">
             <Planner
               activities={user.activities}
               scheduledActivities={user.templates.flatMap(t => t.scheduledActivities)}
@@ -666,7 +700,10 @@ function App() {
               onPlannedActivityUpdate={handlePlannedActivityUpdate}
               currentWeek={currentWeek}
               onWeekChange={handleWeekChange}
-              onActivityDoubleClick={(activityId, scheduledActivityId) => {
+              draggedActivity={draggedActivity}
+              onDragEnd={() => setDraggedActivity(null)}
+              onModeChange={(mode) => setPlannerMode(mode)}
+              onActivityDoubleClick={(activityId, scheduledActivityId, mode) => {
                 const activity = user.activities.find(a => a.id === activityId)
                 if (activity) {
                   setSelectedActivity(activity)
@@ -679,10 +716,15 @@ function App() {
                   } else {
                     setSelectedScheduledActivity(null)
                   }
+                  // Stocker le mode du planner pour déterminer si la modal doit être en readOnly
+                  if (mode) {
+                    setPlannerMode(mode)
+                  }
                   setIsModalOpen(true)
                 }
               }}
             />
+          </div>
         </div>
       )}
 
@@ -697,7 +739,7 @@ function App() {
         onSave={handleSaveActivity}
         onDelete={handleDeleteActivity}
         onActivityClick={handleActivityClickInModal}
-        readOnly={false}
+        readOnly={plannerMode === 'calendrier'}
         scheduledActivity={selectedScheduledActivity}
         onScheduledActivityUpdate={handleScheduledActivityUpdate}
       />

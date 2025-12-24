@@ -3,6 +3,8 @@ import { Activity } from '../models/Activity'
 import { ScheduledActivity, PlannedActivity } from '../models/Planning'
 import { getColorHex, getTextColor } from '../utils/ColorUtils'
 import { useAppSettings } from '../hooks/useAppSettings'
+import PlannerIcon from './PlannerIcon'
+import CalendarIcon from './CalendarIcon'
 
 type PlannerMode = 'routine' | 'calendrier'
 
@@ -18,48 +20,10 @@ interface PlannerProps {
   onPlannedActivityUpdate?: (planned: PlannedActivity) => void
   currentWeek?: Date
   onWeekChange?: (weekStart: Date) => void
-  onActivityDoubleClick?: (activityId: number, scheduledActivityId?: number) => void
-}
-
-// Composant pour l'icône Planner (carnet de note)
-const PlannerIcon = ({ isActive }: { isActive: boolean }) => {
-  const color = isActive ? "#1f2937" : "#6b7280"
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Carnet de note */}
-      <rect x="5" y="4" width="14" height="17" rx="1.5" stroke={color} strokeWidth="1.5" fill="white"/>
-      {/* Spirale à gauche */}
-      <circle cx="5" cy="6" r="0.8" fill={color}/>
-      <circle cx="5" cy="9" r="0.8" fill={color}/>
-      <circle cx="5" cy="12" r="0.8" fill={color}/>
-      <circle cx="5" cy="15" r="0.8" fill={color}/>
-      <circle cx="5" cy="18" r="0.8" fill={color}/>
-      {/* Lignes de texte */}
-      <line x1="8" y1="7" x2="15" y2="7" stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
-      <line x1="8" y1="10" x2="15" y2="10" stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
-      <line x1="8" y1="13" x2="13" y2="13" stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
-      <line x1="8" y1="16" x2="14" y2="16" stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-// Composant pour l'icône Calendrier
-const CalendarIcon = ({ isActive }: { isActive: boolean }) => {
-  const color = isActive ? "white" : "#6b7280"
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
-      <path d="M7.5 10.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
-      <path d="M12.5 10.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
-      <path d="M17.5 10.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
-      <path d="M7.5 14.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
-      <path d="M12.5 14.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
-      <path d="M17.5 14.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
-      <path d="M7.5 18.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
-      <path d="M12.5 18.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
-      <path d="M17.5 18.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0 -2Z" fill={color} strokeWidth="1"></path>
-      <path d="M21.5 3h-2.75a0.25 0.25 0 0 1 -0.25 -0.25V1a1 1 0 0 0 -2 0v4.75a0.75 0.75 0 0 1 -1.5 0V3.5a0.5 0.5 0 0 0 -0.5 -0.5H8.25A0.25 0.25 0 0 1 8 2.75V1a1 1 0 0 0 -2 0v4.75a0.75 0.75 0 0 1 -1.5 0V3.5A0.5 0.5 0 0 0 4 3H2.5a2 2 0 0 0 -2 2v17a2 2 0 0 0 2 2h19a2 2 0 0 0 2 -2V5a2 2 0 0 0 -2 -2Zm0 18.5a0.5 0.5 0 0 1 -0.5 0.5H3a0.5 0.5 0 0 1 -0.5 -0.5v-12A0.5 0.5 0 0 1 3 9h18a0.5 0.5 0 0 1 0.5 0.5Z" fill={color} strokeWidth="1"></path>
-    </svg>
-  )
+  onActivityDoubleClick?: (activityId: number, scheduledActivityId?: number, mode?: PlannerMode) => void
+  draggedActivity?: Activity | null
+  onDragEnd?: () => void
+  onModeChange?: (mode: PlannerMode) => void
 }
 
 export default function Planner({
@@ -73,11 +37,19 @@ export default function Planner({
   currentWeek = new Date(),
   onWeekChange,
   onActivityDoubleClick,
+  draggedActivity: externalDraggedActivity,
+  onDragEnd,
+  onModeChange,
 }: PlannerProps) {
   const { settings } = useAppSettings()
   
   // Gestion interne du mode
   const [mode, setMode] = useState<PlannerMode>('routine')
+  
+  // Notifier le parent du changement de mode
+  useEffect(() => {
+    onModeChange?.(mode)
+  }, [mode, onModeChange])
   const [internalCurrentWeek, setInternalCurrentWeek] = useState<Date>(currentWeek)
   
   // Synchroniser avec currentWeek si fourni en prop
@@ -105,7 +77,9 @@ export default function Planner({
     return Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => i + START_HOUR)
   }, [START_HOUR, END_HOUR])
 
-  const [draggedActivity, setDraggedActivity] = useState<Activity | null>(null) // Activité draguée depuis la liste
+  // Utiliser l'activité draguée depuis les props si fournie, sinon état local
+  const [internalDraggedActivity, setInternalDraggedActivity] = useState<Activity | null>(null)
+  const draggedActivity = externalDraggedActivity ?? internalDraggedActivity
   const [draggedPlannedActivity, setDraggedPlannedActivity] = useState<PlannedActivity | null>(null) // Activité planifiée draguée
   const [draggedScheduledActivity, setDraggedScheduledActivity] = useState<ScheduledActivity | null>(null) // Activité scheduled draguée
   const [hoveredSlot, setHoveredSlot] = useState<{ day: Date; hour: number; minute: number } | null>(null)
@@ -166,22 +140,6 @@ export default function Planner({
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
   }
 
-  // Gérer le drag depuis la liste d'activités
-  const handleActivityDragStart = (e: React.DragEvent, activity: Activity) => {
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('activity', JSON.stringify(activity))
-    setDraggedActivity(activity)
-  }
-
-  // Gérer le drag d'une activité planifiée existante
-  const handlePlannedActivityDragStart = (e: React.DragEvent, planned: PlannedActivity) => {
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('plannedActivity', JSON.stringify(planned))
-    setDraggedPlannedActivity(planned)
-    setSelectedPlannedActivity(planned)
-    setSelectedScheduledActivity(null)
-  }
-
   // Gérer le drag d'une activité scheduled existante
   const handleScheduledActivityDragStart = (e: React.DragEvent, scheduled: ScheduledActivity) => {
     e.dataTransfer.effectAllowed = 'move'
@@ -237,7 +195,10 @@ export default function Planner({
         // On passe le jour pour que App.tsx puisse calculer la semaine
       }
       onScheduledActivityCreate?.(newScheduled, day)
-      setDraggedActivity(null)
+      if (!externalDraggedActivity) {
+        setInternalDraggedActivity(null)
+      }
+      onDragEnd?.()
       setHoveredSlot(null)
       return
     }
@@ -439,7 +400,10 @@ export default function Planner({
           dayOfWeek,
         }
         onScheduledActivityCreate?.(newScheduled, day)
-        setDraggedActivity(null)
+        if (!externalDraggedActivity) {
+          setInternalDraggedActivity(null)
+        }
+        onDragEnd?.()
         setHoveredSlot(null)
         return
       } catch (error) {
@@ -1047,33 +1011,6 @@ export default function Planner({
 
   return (
     <div className="flex flex-col h-full overflow-hidden pb-6">
-      {/* Sélecteur d'activité - uniquement en mode routine */}
-      {mode === 'routine' && (
-        <div className="p-4 border-b bg-gray-50 flex-shrink-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium">Glissez une activité vers le planner :</span>
-            {activities.map(activity => (
-              <button
-                key={activity.id}
-                draggable
-                onDragStart={(e) => handleActivityDragStart(e, activity)}
-                onDragEnd={() => {
-                  setDraggedActivity(null)
-                  setHoveredSlot(null)
-                }}
-                className="px-3 py-1 rounded transition-all hover:opacity-80 cursor-move"
-                style={{
-                  backgroundColor: getColorHex(activity.color),
-                  color: getTextColor(getColorHex(activity.color)),
-                } as React.CSSProperties}
-              >
-                {activity.title}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Planner */}
       <div className="flex-1 flex flex-col bg-white min-h-0">
         {/* Zone scrollable avec les heures et les slots */}
@@ -1204,9 +1141,9 @@ export default function Planner({
                             height: `${SLOT_HEIGHT / (60 / SLOT_MINUTES)}px`,
                             position: 'relative',
                           }}
-                          onDrop={(e) => handleDrop(e, day, slot.hour, slot.minute)}
-                          onDragOver={(e) => handleDragOver(e, day, slot.hour, slot.minute)}
-                          onDragLeave={handleDragLeave}
+                          onDrop={mode === 'routine' ? (e) => handleDrop(e, day, slot.hour, slot.minute) : undefined}
+                          onDragOver={mode === 'routine' ? (e) => handleDragOver(e, day, slot.hour, slot.minute) : undefined}
+                          onDragLeave={mode === 'routine' ? handleDragLeave : undefined}
                           onClick={() => {
                             // Désélectionner les activités si on clique sur un slot vide
                             setSelectedPlannedActivity(null)
@@ -1237,29 +1174,13 @@ export default function Planner({
                       if (!style) return null
                       const activity = activities.find(a => a.id === displayPlanned.activityId)
 
-                      const isSelected = selectedPlannedActivity?.id === planned.id
-                      const isCurrentlyResizing = isResizing && isSelected
-
                       return (
                         <div
                           key={planned.id}
-                          draggable={!isCurrentlyResizing}
-                          onDragStart={(e) => {
-                            if (isCurrentlyResizing) {
-                              e.preventDefault()
-                              return
-                            }
-                            handlePlannedActivityDragStart(e, planned)
-                          }}
-                          onDragEnd={() => {
-                            setDraggedPlannedActivity(null)
-                            setHoveredSlot(null)
-                          }}
-                          onDragOver={(e) => handleActivityDragOver(e, day, planned.id)}
-                          onDrop={(e) => handleActivityDrop(e, day, planned.id)}
+                          draggable={false}
                           style={{
                             ...style,
-                            cursor: isCurrentlyResizing ? 'ns-resize' : 'move',
+                            cursor: 'default',
                           }}
                           className="flex flex-col justify-center relative"
                           title={activity?.title}
@@ -1271,44 +1192,14 @@ export default function Planner({
                           onDoubleClick={(e) => {
                             e.stopPropagation()
                             if (activity?.id && onActivityDoubleClick) {
-                              onActivityDoubleClick(activity.id, planned.scheduledActivityId)
+                              onActivityDoubleClick(activity.id, planned.scheduledActivityId, mode)
                             }
                           }}
                         >
-                          {/* Poignée de redimensionnement en haut */}
-                          {isSelected && activity && (
-                            <div
-                              className="absolute left-1/2 transform -translate-x-1/2 cursor-ns-resize z-20"
-                              onMouseDown={(e) => handleResizeStart(e, planned, 'top')}
-                              style={{
-                                top: '-3px',
-                                width: '40px',
-                                height: '6px',
-                                backgroundColor: getTextColor(getColorHex(activity.color)),
-                                borderRadius: '3px',
-                              }}
-                            />
-                          )}
-                          
                           <div className="font-medium truncate">{activity?.title}</div>
                           <div className="text-xs opacity-90">
                             {displayPlanned.startTime} - {displayPlanned.endTime}
                           </div>
-                          
-                          {/* Poignée de redimensionnement en bas */}
-                          {isSelected && activity && (
-                            <div
-                              className="absolute left-1/2 transform -translate-x-1/2 cursor-ns-resize z-20"
-                              onMouseDown={(e) => handleResizeStart(e, planned, 'bottom')}
-                              style={{
-                                bottom: '-3px',
-                                width: '40px',
-                                height: '6px',
-                                backgroundColor: getTextColor(getColorHex(activity.color)),
-                                borderRadius: '3px',
-                              }}
-                            />
-                          )}
                         </div>
                       )
                     })
@@ -1424,7 +1315,7 @@ export default function Planner({
                           onDoubleClick={(e) => {
                             e.stopPropagation()
                             if (activity.id && onActivityDoubleClick) {
-                              onActivityDoubleClick(activity.id, scheduled.id)
+                              onActivityDoubleClick(activity.id, scheduled.id, mode)
                             }
                           }}
                         >
@@ -1526,7 +1417,7 @@ export default function Planner({
 
       {/* Navigation de semaine - uniquement en mode calendrier */}
       {mode === 'calendrier' && (
-        <div className="p-4 border-t bg-gray-50 flex items-center justify-between">
+        <div className="p-2 border-t bg-gray-50 flex items-center justify-between">
           <button
             onClick={handlePreviousWeek}
             className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
