@@ -4,6 +4,7 @@ export interface PlannerSettings {
   slotHeight: number // Hauteur d'un slot d'une heure en pixels (par défaut 60)
   slotMinutes: number // Granularité des slots en minutes (par défaut 15)
   defaultActivityDuration: number // Durée par défaut d'une activité en minutes (par défaut 30)
+  scrollThreshold: number // Distance en pixels du bord pour déclencher le scroll automatique (par défaut 50)
 }
 
 export interface AppSettings {
@@ -19,6 +20,7 @@ export const DEFAULT_PLANNER_SETTINGS: PlannerSettings = {
   slotHeight: 60,
   slotMinutes: 15,
   defaultActivityDuration: 30,
+  scrollThreshold: 50,
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {

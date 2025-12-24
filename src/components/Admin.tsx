@@ -166,6 +166,25 @@ export default function Admin() {
                     Durée par défaut d'une nouvelle activité en minutes (5-480)
                   </p>
                 </div>
+
+                {/* Seuil de scroll */}
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-2">
+                    Seuil de scroll automatique (SCROLL_THRESHOLD)
+                  </label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="200"
+                    step="5"
+                    value={localSettings.planner.scrollThreshold}
+                    onChange={(e) => handlePlannerSettingChange('scrollThreshold', parseInt(e.target.value) || 50)}
+                    className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Distance en pixels du bord pour déclencher le scroll automatique (10-200)
+                  </p>
+                </div>
               </div>
             </div>
           </section>

@@ -71,6 +71,7 @@ export default function Planner({
   const SLOT_HEIGHT = settings.planner.slotHeight
   const SLOT_MINUTES = settings.planner.slotMinutes
   const DEFAULT_ACTIVITY_DURATION = settings.planner.defaultActivityDuration
+  const SCROLL_THRESHOLD = settings.planner.scrollThreshold
   
   // Calculer les heures dynamiquement
   const HOURS = useMemo(() => {
@@ -89,6 +90,7 @@ export default function Planner({
   const [resizeStartY, setResizeStartY] = useState<number | null>(null)
   const [resizeStartTime, setResizeStartTime] = useState<string | null>(null)
   const [resizeStartScrollTop, setResizeStartScrollTop] = useState<number | null>(null)
+  const [scrollCursor, setScrollCursor] = useState<'up' | 'down' | null>(null)
   const plannerRef = useRef<HTMLDivElement>(null)
 
   // Calculer le début de la semaine (lundi) - uniquement en mode calendrier
@@ -149,214 +151,160 @@ export default function Planner({
     setSelectedPlannedActivity(null)
   }
 
+  // Fonction utilitaire pour ajuster les heures dans les limites
+  const adjustTimeBounds = (
+    hour: number, 
+    minute: number, 
+    duration: number
+  ): { startMinutes: number; endMinutes: number } | null => {
+    let startMinutes = hour * 60 + minute
+    let endMinutes = startMinutes + duration
+    const maxMinutes = (END_HOUR + 1) * 60
+    const minMinutes = START_HOUR * 60
+    
+    // Ajuster si l'activité dépasse la limite supérieure
+    if (endMinutes > maxMinutes) {
+      endMinutes = maxMinutes
+      startMinutes = endMinutes - duration
+    }
+    
+    // Ajuster si l'activité commence avant la limite inférieure
+    if (startMinutes < minMinutes) {
+      startMinutes = minMinutes
+      endMinutes = startMinutes + duration
+      // Si après ajustement, ça dépasse encore, limiter
+      if (endMinutes > maxMinutes) {
+        endMinutes = maxMinutes
+        startMinutes = endMinutes - duration
+        // Si la durée est trop grande, ne pas permettre
+        if (startMinutes < minMinutes) {
+          return null
+        }
+      }
+    }
+    
+    return { startMinutes, endMinutes }
+  }
+
+  // Fonction utilitaire pour nettoyer après un drop
+  const cleanupAfterDrop = () => {
+    if (!externalDraggedActivity) {
+      setInternalDraggedActivity(null)
+    }
+    onDragEnd?.()
+    setHoveredSlot(null)
+    setScrollCursor(null)
+  }
+
+  // Handler pour créer une nouvelle activité scheduled
+  const handleNewActivityDrop = (
+    activity: Activity, 
+    day: Date, 
+    hour: number, 
+    minute: number
+  ) => {
+    const adjusted = adjustTimeBounds(hour, minute, DEFAULT_ACTIVITY_DURATION)
+    if (!adjusted) return
+    
+    const { startMinutes, endMinutes } = adjusted
+    const newScheduled: ScheduledActivity = {
+      activityId: activity.id!,
+      startTime: minutesToTime(startMinutes),
+      endTime: minutesToTime(endMinutes),
+      dayOfWeek: day.getDay(),
+    }
+    onScheduledActivityCreate?.(newScheduled, day)
+    cleanupAfterDrop()
+  }
+
+  // Handler pour déplacer une PlannedActivity
+  const handlePlannedActivityDrop = (
+    planned: PlannedActivity,
+    day: Date,
+    hour: number,
+    minute: number
+  ) => {
+    const duration = timeToMinutes(planned.endTime) - timeToMinutes(planned.startTime)
+    const adjusted = adjustTimeBounds(hour, minute, duration)
+    if (!adjusted) return
+    
+    const { startMinutes, endMinutes } = adjusted
+    
+    // Si la plannedActivity a un scheduledActivityId, modifier la scheduledActivity source
+    if (planned.scheduledActivityId) {
+      const scheduled = scheduledActivities.find(s => s.id === planned.scheduledActivityId)
+      if (scheduled) {
+        const updated: ScheduledActivity = {
+          ...scheduled,
+          startTime: minutesToTime(startMinutes),
+          endTime: minutesToTime(endMinutes),
+          dayOfWeek: day.getDay(),
+        }
+        onScheduledActivityUpdate?.(updated)
+        setDraggedPlannedActivity(null)
+        setHoveredSlot(null)
+        return
+      }
+    }
+    
+    // Sinon, modifier la plannedActivity normalement
+    const updated: PlannedActivity = {
+      ...planned,
+      date: day.toISOString().split('T')[0],
+      startTime: minutesToTime(startMinutes),
+      endTime: minutesToTime(endMinutes),
+    }
+    onPlannedActivityUpdate?.(updated)
+    setDraggedPlannedActivity(null)
+    setHoveredSlot(null)
+  }
+
+  // Handler pour déplacer une ScheduledActivity
+  const handleScheduledActivityDrop = (
+    scheduled: ScheduledActivity,
+    day: Date,
+    hour: number,
+    minute: number
+  ) => {
+    const duration = timeToMinutes(scheduled.endTime) - timeToMinutes(scheduled.startTime)
+    const adjusted = adjustTimeBounds(hour, minute, duration)
+    if (!adjusted) return
+    
+    const { startMinutes, endMinutes } = adjusted
+    const dayOfWeek = day.getDay()
+    
+    const updated: ScheduledActivity = {
+      ...scheduled,
+      startTime: minutesToTime(startMinutes),
+      endTime: minutesToTime(endMinutes),
+      // Ne mettre à jour dayOfWeek que si ce n'est pas une activité quotidienne
+      ...(scheduled.periodicity?.unit === 'daily' && scheduled.periodicity.frequency < 7 
+        ? {} 
+        : { dayOfWeek }),
+    }
+    onScheduledActivityUpdate?.(updated)
+    setDraggedScheduledActivity(null)
+    setHoveredSlot(null)
+  }
+
   // Gérer le drop sur un slot
   const handleDrop = (e: React.DragEvent, day: Date, hour: number, minute: number) => {
     e.preventDefault()
     e.stopPropagation()
 
-    const dayOfWeek = day.getDay()
-
     // Utiliser d'abord l'état local (plus fiable que dataTransfer)
     if (draggedActivity) {
-      let startMinutes = hour * 60 + minute
-      let endMinutes = startMinutes + DEFAULT_ACTIVITY_DURATION
-      const maxMinutes = (END_HOUR + 1) * 60 // 23:00 = 1380 minutes
-      const minMinutes = START_HOUR * 60 // 6:00 = 360 minutes
-      
-      // Ajuster si l'activité dépasse 23:00 : proposer le dernier créneau possible
-      if (endMinutes > maxMinutes) {
-        endMinutes = maxMinutes
-        startMinutes = endMinutes - DEFAULT_ACTIVITY_DURATION
-      }
-      
-      // Ajuster si l'activité commence avant 6:00 : proposer le premier créneau possible
-      if (startMinutes < minMinutes) {
-        startMinutes = minMinutes
-        endMinutes = startMinutes + DEFAULT_ACTIVITY_DURATION
-        // Si après ajustement, ça dépasse encore 23:00, limiter à 23:00
-        if (endMinutes > maxMinutes) {
-          endMinutes = maxMinutes
-          startMinutes = endMinutes - DEFAULT_ACTIVITY_DURATION
-          // Si la durée est trop grande, ne pas permettre le drop
-          if (startMinutes < minMinutes) {
-            return
-          }
-        }
-      }
-      
-      const startTime = minutesToTime(startMinutes)
-      const endTime = minutesToTime(endMinutes)
-      const newScheduled: ScheduledActivity = {
-        activityId: draggedActivity.id!,
-        startTime,
-        endTime,
-        dayOfWeek,
-        // Calculer la semaine du mois pour monthly (sera utilisé si l'utilisateur change en monthly)
-        // On passe le jour pour que App.tsx puisse calculer la semaine
-      }
-      onScheduledActivityCreate?.(newScheduled, day)
-      if (!externalDraggedActivity) {
-        setInternalDraggedActivity(null)
-      }
-      onDragEnd?.()
-      setHoveredSlot(null)
+      handleNewActivityDrop(draggedActivity, day, hour, minute)
       return
     }
 
-    // Vérifier si on drag une PlannedActivity existante
     if (draggedPlannedActivity) {
-      const planned = draggedPlannedActivity
-      
-      // Si la plannedActivity a un scheduledActivityId, modifier la scheduledActivity source
-      if (planned.scheduledActivityId) {
-        const scheduled = scheduledActivities.find(s => s.id === planned.scheduledActivityId)
-        if (scheduled) {
-          // Préserver la durée de l'activité existante
-          const start = timeToMinutes(scheduled.startTime)
-          const end = timeToMinutes(scheduled.endTime)
-          const duration = end - start
-          let startMinutes = hour * 60 + minute
-          let endMinutes = startMinutes + duration
-          const maxMinutes = (END_HOUR + 1) * 60 // 23:00 = 1380 minutes
-          const minMinutes = START_HOUR * 60 // 6:00 = 360 minutes
-          
-          // Ajuster si l'activité dépasse 23:00 : proposer le dernier créneau possible
-          if (endMinutes > maxMinutes) {
-            endMinutes = maxMinutes
-            startMinutes = endMinutes - duration
-          }
-          
-          // Ajuster si l'activité commence avant 6:00 : proposer le premier créneau possible
-          if (startMinutes < minMinutes) {
-            startMinutes = minMinutes
-            endMinutes = startMinutes + duration
-            // Si après ajustement, ça dépasse encore 23:00, limiter à 23:00
-            if (endMinutes > maxMinutes) {
-              endMinutes = maxMinutes
-              startMinutes = endMinutes - duration
-              // Si la durée est trop grande, ne pas permettre le drop
-              if (startMinutes < minMinutes) {
-                return
-              }
-            }
-          }
-          
-          const startTime = minutesToTime(startMinutes)
-          const endTime = minutesToTime(endMinutes)
-          
-          // Préserver toutes les propriétés de l'activité scheduled originale
-          const updated: ScheduledActivity = {
-            ...scheduled,
-            startTime,
-            endTime,
-            dayOfWeek,
-          }
-          onScheduledActivityUpdate?.(updated)
-          setDraggedPlannedActivity(null)
-          setHoveredSlot(null)
-          return
-        }
-      }
-      
-      // Sinon, modifier la plannedActivity normalement
-      const dateStr = day.toISOString().split('T')[0]
-      // Préserver la durée de l'activité existante
-      const start = timeToMinutes(planned.startTime)
-      const end = timeToMinutes(planned.endTime)
-      const duration = end - start
-      let startMinutes = hour * 60 + minute
-      let endMinutes = startMinutes + duration
-      const maxMinutes = (END_HOUR + 1) * 60 // 23:00 = 1380 minutes
-      const minMinutes = START_HOUR * 60 // 6:00 = 360 minutes
-      
-      // Ajuster si l'activité dépasse 23:00 : proposer le dernier créneau possible
-      if (endMinutes > maxMinutes) {
-        endMinutes = maxMinutes
-        startMinutes = endMinutes - duration
-      }
-      
-      // Ajuster si l'activité commence avant 6:00 : proposer le premier créneau possible
-      if (startMinutes < minMinutes) {
-        startMinutes = minMinutes
-        endMinutes = startMinutes + duration
-        // Si après ajustement, ça dépasse encore 23:00, limiter à 23:00
-        if (endMinutes > maxMinutes) {
-          endMinutes = maxMinutes
-          startMinutes = endMinutes - duration
-          // Si la durée est trop grande, ne pas permettre le drop
-          if (startMinutes < minMinutes) {
-            return
-          }
-        }
-      }
-      
-      const startTime = minutesToTime(startMinutes)
-      const endTime = minutesToTime(endMinutes)
-      
-      // Préserver toutes les propriétés de l'activité planned originale
-      const updated: PlannedActivity = {
-        ...planned,
-        date: dateStr,
-        startTime,
-        endTime,
-      }
-      onPlannedActivityUpdate?.(updated)
-      setDraggedPlannedActivity(null)
-      setHoveredSlot(null)
+      handlePlannedActivityDrop(draggedPlannedActivity, day, hour, minute)
       return
     }
 
-    // Vérifier si on drag une ScheduledActivity existante
     if (draggedScheduledActivity) {
-      const scheduled = draggedScheduledActivity
-      // Préserver la durée de l'activité existante
-      const start = timeToMinutes(scheduled.startTime)
-      const end = timeToMinutes(scheduled.endTime)
-      const duration = end - start
-      let startMinutes = hour * 60 + minute
-      let endMinutes = startMinutes + duration
-      const maxMinutes = (END_HOUR + 1) * 60 // 23:00 = 1380 minutes
-      const minMinutes = START_HOUR * 60 // 6:00 = 360 minutes
-      
-      // Ajuster si l'activité dépasse 23:00 : proposer le dernier créneau possible
-      if (endMinutes > maxMinutes) {
-        endMinutes = maxMinutes
-        startMinutes = endMinutes - duration
-      }
-      
-      // Ajuster si l'activité commence avant 6:00 : proposer le premier créneau possible
-      if (startMinutes < minMinutes) {
-        startMinutes = minMinutes
-        endMinutes = startMinutes + duration
-        // Si après ajustement, ça dépasse encore 23:00, limiter à 23:00
-        if (endMinutes > maxMinutes) {
-          endMinutes = maxMinutes
-          startMinutes = endMinutes - duration
-          // Si la durée est trop grande, ne pas permettre le drop
-          if (startMinutes < minMinutes) {
-            return
-          }
-        }
-      }
-      
-      const startTime = minutesToTime(startMinutes)
-      const endTime = minutesToTime(endMinutes)
-      
-      // Pour les activités quotidiennes (daily avec frequency < 7), on ne change pas le dayOfWeek
-      // car elles s'affichent sur tous les jours
-      // Préserver toutes les propriétés de l'activité scheduled originale
-      const updated: ScheduledActivity = {
-        ...scheduled,
-        startTime,
-        endTime,
-        // Ne mettre à jour dayOfWeek que si ce n'est pas une activité quotidienne
-        ...(scheduled.periodicity?.unit === 'daily' && scheduled.periodicity.frequency < 7 
-          ? {} 
-          : { dayOfWeek }),
-      }
-      onScheduledActivityUpdate?.(updated)
-      setDraggedScheduledActivity(null)
-      setHoveredSlot(null)
+      handleScheduledActivityDrop(draggedScheduledActivity, day, hour, minute)
       return
     }
 
@@ -365,152 +313,29 @@ export default function Planner({
     if (activityData) {
       try {
         const activity: Activity = JSON.parse(activityData)
-        let startMinutes = hour * 60 + minute
-        let endMinutes = startMinutes + DEFAULT_ACTIVITY_DURATION
-        const maxMinutes = (END_HOUR + 1) * 60 // 23:00 = 1380 minutes
-        const minMinutes = START_HOUR * 60 // 6:00 = 360 minutes
-        
-        // Ajuster si l'activité dépasse 23:00 : proposer le dernier créneau possible
-        if (endMinutes > maxMinutes) {
-          endMinutes = maxMinutes
-          startMinutes = endMinutes - DEFAULT_ACTIVITY_DURATION
-        }
-        
-        // Ajuster si l'activité commence avant 6:00 : proposer le premier créneau possible
-        if (startMinutes < minMinutes) {
-          startMinutes = minMinutes
-          endMinutes = startMinutes + DEFAULT_ACTIVITY_DURATION
-          // Si après ajustement, ça dépasse encore 23:00, limiter à 23:00
-          if (endMinutes > maxMinutes) {
-            endMinutes = maxMinutes
-            startMinutes = endMinutes - DEFAULT_ACTIVITY_DURATION
-            // Si la durée est trop grande, ne pas permettre le drop
-            if (startMinutes < minMinutes) {
-              return
-            }
-          }
-        }
-        
-        const startTime = minutesToTime(startMinutes)
-        const endTime = minutesToTime(endMinutes)
-        const newScheduled: ScheduledActivity = {
-          activityId: activity.id!,
-          startTime,
-          endTime,
-          dayOfWeek,
-        }
-        onScheduledActivityCreate?.(newScheduled, day)
-        if (!externalDraggedActivity) {
-          setInternalDraggedActivity(null)
-        }
-        onDragEnd?.()
-        setHoveredSlot(null)
-        return
+        handleNewActivityDrop(activity, day, hour, minute)
       } catch (error) {
         console.error('Erreur lors de la désérialisation de l\'activité:', error)
       }
+      return
     }
 
     const plannedData = e.dataTransfer.getData('plannedActivity')
     if (plannedData) {
       try {
         const planned: PlannedActivity = JSON.parse(plannedData)
-        const dateStr = day.toISOString().split('T')[0]
-        const start = timeToMinutes(planned.startTime)
-        const end = timeToMinutes(planned.endTime)
-        const duration = end - start
-        let startMinutes = hour * 60 + minute
-        let endMinutes = startMinutes + duration
-        const maxMinutes = (END_HOUR + 1) * 60 // 23:00 = 1380 minutes
-        const minMinutes = START_HOUR * 60 // 6:00 = 360 minutes
-        
-        // Ajuster si l'activité dépasse 23:00 : proposer le dernier créneau possible
-        if (endMinutes > maxMinutes) {
-          endMinutes = maxMinutes
-          startMinutes = endMinutes - duration
-        }
-        
-        // Ajuster si l'activité commence avant 6:00 : proposer le premier créneau possible
-        if (startMinutes < minMinutes) {
-          startMinutes = minMinutes
-          endMinutes = startMinutes + duration
-          // Si après ajustement, ça dépasse encore 23:00, limiter à 23:00
-          if (endMinutes > maxMinutes) {
-            endMinutes = maxMinutes
-            startMinutes = endMinutes - duration
-            // Si la durée est trop grande, ne pas permettre le drop
-            if (startMinutes < minMinutes) {
-              return
-            }
-          }
-        }
-        
-        const startTime = minutesToTime(startMinutes)
-        const endTime = minutesToTime(endMinutes)
-        
-        const updated: PlannedActivity = {
-          ...planned,
-          date: dateStr,
-          startTime,
-          endTime,
-        }
-        onPlannedActivityUpdate?.(updated)
-        setDraggedPlannedActivity(null)
-        setHoveredSlot(null)
-        return
+        handlePlannedActivityDrop(planned, day, hour, minute)
       } catch (error) {
         console.error('Erreur lors de la désérialisation de la plannedActivity:', error)
       }
+      return
     }
 
     const scheduledData = e.dataTransfer.getData('scheduledActivity')
     if (scheduledData) {
       try {
         const scheduled: ScheduledActivity = JSON.parse(scheduledData)
-        const start = timeToMinutes(scheduled.startTime)
-        const end = timeToMinutes(scheduled.endTime)
-        const duration = end - start
-        let startMinutes = hour * 60 + minute
-        let endMinutes = startMinutes + duration
-        const maxMinutes = (END_HOUR + 1) * 60 // 23:00 = 1380 minutes
-        const minMinutes = START_HOUR * 60 // 6:00 = 360 minutes
-        
-        // Ajuster si l'activité dépasse 23:00 : proposer le dernier créneau possible
-        if (endMinutes > maxMinutes) {
-          endMinutes = maxMinutes
-          startMinutes = endMinutes - duration
-        }
-        
-        // Ajuster si l'activité commence avant 6:00 : proposer le premier créneau possible
-        if (startMinutes < minMinutes) {
-          startMinutes = minMinutes
-          endMinutes = startMinutes + duration
-          // Si après ajustement, ça dépasse encore 23:00, limiter à 23:00
-          if (endMinutes > maxMinutes) {
-            endMinutes = maxMinutes
-            startMinutes = endMinutes - duration
-            // Si la durée est trop grande, ne pas permettre le drop
-            if (startMinutes < minMinutes) {
-              return
-            }
-          }
-        }
-        
-        const startTime = minutesToTime(startMinutes)
-        const endTime = minutesToTime(endMinutes)
-        
-        const updated: ScheduledActivity = {
-          ...scheduled,
-          startTime,
-          endTime,
-          ...(scheduled.periodicity?.unit === 'daily' && scheduled.periodicity.frequency < 7 
-            ? {} 
-            : { dayOfWeek }),
-        }
-        onScheduledActivityUpdate?.(updated)
-        setDraggedScheduledActivity(null)
-        setHoveredSlot(null)
-        return
+        handleScheduledActivityDrop(scheduled, day, hour, minute)
       } catch (error) {
         console.error('Erreur lors de la désérialisation de la scheduledActivity:', error)
       }
@@ -521,6 +346,27 @@ export default function Planner({
   const handleDragOver = (e: React.DragEvent, day: Date, hour: number, minute: number) => {
     e.preventDefault()
     e.stopPropagation()
+    
+    // Détecter si on est dans la zone de scroll
+    if (plannerRef.current) {
+      const rect = plannerRef.current.getBoundingClientRect()
+      const mouseYRelativeToViewport = e.clientY - rect.top
+      
+      if (mouseYRelativeToViewport < SCROLL_THRESHOLD && plannerRef.current.scrollTop > 0) {
+        setScrollCursor('up')
+
+      } else if (mouseYRelativeToViewport > rect.height - SCROLL_THRESHOLD) {
+        const maxScroll = plannerRef.current.scrollHeight - plannerRef.current.clientHeight
+        if (plannerRef.current.scrollTop < maxScroll) {
+          setScrollCursor('down')
+        } else {
+          setScrollCursor(null)
+        }
+      } else {
+        setScrollCursor(null)
+      }
+    }
+    
     // Utiliser requestAnimationFrame pour améliorer la fluidité
     requestAnimationFrame(() => {
       setHoveredSlot({ day, hour, minute })
@@ -565,6 +411,25 @@ export default function Planner({
     e.preventDefault()
     e.stopPropagation()
     
+    // Détecter si on est dans la zone de scroll
+    if (plannerRef.current) {
+      const rect = plannerRef.current.getBoundingClientRect()
+      const mouseYRelativeToViewport = e.clientY - rect.top
+      
+      if (mouseYRelativeToViewport < SCROLL_THRESHOLD && plannerRef.current.scrollTop > 0) {
+        setScrollCursor('up')
+      } else if (mouseYRelativeToViewport > rect.height - SCROLL_THRESHOLD) {
+        const maxScroll = plannerRef.current.scrollHeight - plannerRef.current.clientHeight
+        if (plannerRef.current.scrollTop < maxScroll) {
+          setScrollCursor('down')
+        } else {
+          setScrollCursor(null)
+        }
+      } else {
+        setScrollCursor(null)
+      }
+    }
+    
     // Utiliser requestAnimationFrame pour améliorer la fluidité
     requestAnimationFrame(() => {
       const slot = getSlotFromMousePosition(e)
@@ -596,6 +461,7 @@ export default function Planner({
   // Gérer le drag leave
   const handleDragLeave = () => {
     setHoveredSlot(null)
+    setScrollCursor(null)
   }
 
   // Détecter les chevauchements et calculer la position/largeur des activités
@@ -740,35 +606,11 @@ export default function Planner({
 
     if (!activity) return null
 
-    // Calculer la position et la hauteur du preview
-    let previewStartMinutes = hoveredSlot.hour * 60 + hoveredSlot.minute
-    let previewEndMinutes = previewStartMinutes + duration
+    // Calculer la position et la hauteur du preview en utilisant adjustTimeBounds
+    const adjusted = adjustTimeBounds(hoveredSlot.hour, hoveredSlot.minute, duration)
+    if (!adjusted) return null
     
-    // Ajuster si l'activité dépasse 23:00 : proposer le dernier créneau possible
-    const maxMinutes = (END_HOUR + 1) * 60 // 23:00 = 1380 minutes
-    if (previewEndMinutes > maxMinutes) {
-      // Ajuster pour que l'activité se termine à 23:00
-      previewEndMinutes = maxMinutes
-      previewStartMinutes = previewEndMinutes - duration
-    }
-    
-    // Ajuster si l'activité commence avant 6:00 : proposer le premier créneau possible
-    const minMinutes = START_HOUR * 60 // 6:00 = 360 minutes
-    if (previewStartMinutes < minMinutes) {
-      // Ajuster pour que l'activité commence à 6:00
-      previewStartMinutes = minMinutes
-      previewEndMinutes = previewStartMinutes + duration
-      // Si après ajustement, ça dépasse encore 23:00, limiter à 23:00
-      if (previewEndMinutes > maxMinutes) {
-        previewEndMinutes = maxMinutes
-        previewStartMinutes = previewEndMinutes - duration
-        // Si la durée est trop grande, ne pas afficher
-        if (previewStartMinutes < minMinutes) {
-          return null
-        }
-      }
-    }
-    
+    const { startMinutes: previewStartMinutes } = adjusted
     const previewStartMinutesFromStart = previewStartMinutes - (START_HOUR * 60)
     const top = (previewStartMinutesFromStart / 60) * SLOT_HEIGHT
     const height = (duration / 60) * SLOT_HEIGHT
@@ -815,23 +657,21 @@ export default function Planner({
 
     const rect = plannerRef.current.getBoundingClientRect()
     
-    // Scroll automatique si la souris est proche des bords
-    const SCROLL_THRESHOLD = 50 // Distance en pixels du bord pour déclencher le scroll
-    const SCROLL_SPEED = 5 // Vitesse de scroll en pixels par frame
+    // Détecter si on est dans la zone de scroll (le scroll sera géré par l'effet)
     const mouseYRelativeToViewport = e.clientY - rect.top 
     
-    // Scroll vers le haut si la souris est proche du bord supérieur
+    // Détecter la zone de scroll pour changer le curseur
     if (mouseYRelativeToViewport < SCROLL_THRESHOLD && plannerRef.current.scrollTop > 0) {
-      const newScrollTop = Math.max(0, plannerRef.current.scrollTop - SCROLL_SPEED)
-      plannerRef.current.scrollTop = newScrollTop
-    }
-    // Scroll vers le bas si la souris est proche du bord inférieur
-    else if (mouseYRelativeToViewport > rect.height - SCROLL_THRESHOLD) {
+      setScrollCursor('up')
+    } else if (mouseYRelativeToViewport > rect.height - SCROLL_THRESHOLD) {
       const maxScroll = plannerRef.current.scrollHeight - plannerRef.current.clientHeight
       if (plannerRef.current.scrollTop < maxScroll) {
-        const newScrollTop = Math.min(maxScroll, plannerRef.current.scrollTop + SCROLL_SPEED)
-        plannerRef.current.scrollTop = newScrollTop
+        setScrollCursor('down')
+      } else {
+        setScrollCursor(null)
       }
+    } else {
+      setScrollCursor(null)
     }
     
     // Prendre en compte le scroll actuel pour calculer la position relative correcte
@@ -935,6 +775,7 @@ export default function Planner({
     setResizeStartY(null)
     setResizeStartTime(null)
     setResizeStartScrollTop(null)
+    setScrollCursor(null)
   }
 
   // Gérer les événements globaux pour le resize
@@ -1009,12 +850,55 @@ export default function Planner({
     }
   }, [mode])
 
+  // Scroll automatique quand le curseur est dans la zone de scroll
+  useEffect(() => {
+    if (!scrollCursor || !plannerRef.current) return
+
+    const SCROLL_SPEED = 5 // Vitesse de scroll en pixels par frame
+    let animationFrameId: number | null = null
+
+    const scroll = () => {
+      if (!plannerRef.current || !scrollCursor) {
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId)
+        }
+        return
+      }
+
+      if (scrollCursor === 'up' && plannerRef.current.scrollTop > 0) {
+        plannerRef.current.scrollTop = Math.max(0, plannerRef.current.scrollTop - SCROLL_SPEED)
+        animationFrameId = requestAnimationFrame(scroll)
+      } else if (scrollCursor === 'down') {
+        const maxScroll = plannerRef.current.scrollHeight - plannerRef.current.clientHeight
+        if (plannerRef.current.scrollTop < maxScroll) {
+          plannerRef.current.scrollTop = Math.min(maxScroll, plannerRef.current.scrollTop + SCROLL_SPEED)
+          animationFrameId = requestAnimationFrame(scroll)
+        }
+      }
+    }
+
+    animationFrameId = requestAnimationFrame(scroll)
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId)
+      }
+    }
+  }, [scrollCursor])
+
   return (
     <div className="flex flex-col h-full overflow-hidden pb-6">
       {/* Planner */}
       <div className="flex-1 flex flex-col bg-white min-h-0">
         {/* Zone scrollable avec les heures et les slots */}
-        <div className="flex-1 overflow-auto" ref={plannerRef} style={{ minHeight: 0 }}>
+        <div 
+          className="flex-1 overflow-auto" 
+          ref={plannerRef} 
+          style={{ 
+            minHeight: 0,
+            cursor: scrollCursor === 'up' ? 'n-resize' : scrollCursor === 'down' ? 's-resize' : undefined
+          }}
+        >
           {/* Header sticky avec les jours */}
           <div className="flex border-b sticky top-0 z-20 flex-shrink-0" style={{ boxSizing: 'border-box', width: '100%', background: 'linear-gradient(to bottom, rgba(234, 221, 205, 1), rgba(234, 221, 205, 0.25))' }}>
             {/* Colonne des heures - sélecteur de mode */}
@@ -1281,6 +1165,7 @@ export default function Planner({
                           onDragEnd={() => {
                             setDraggedScheduledActivity(null)
                             setHoveredSlot(null)
+                            setScrollCursor(null)
                           }}
                           onDragOver={(e) => handleActivityDragOver(e, day, scheduled.id)}
                           onDrop={(e) => handleActivityDrop(e, day, scheduled.id)}
