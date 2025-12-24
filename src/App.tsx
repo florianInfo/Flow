@@ -683,6 +683,7 @@ function App() {
                   onDragEnd={() => {
                     setDraggedActivity(null)
                   }}
+                  onActivityClick={handleActivityClick}
                   disabled={plannerMode === 'calendrier'}
                 />
               </div>

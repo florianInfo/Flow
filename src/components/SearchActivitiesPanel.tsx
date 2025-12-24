@@ -5,6 +5,7 @@ interface SearchActivitiesPanelProps {
   activities: Activity[]
   onDragStart: (e: React.DragEvent, activity: Activity) => void
   onDragEnd: () => void
+  onActivityClick?: (activity: Activity) => void
   disabled?: boolean
 }
 
@@ -12,6 +13,7 @@ export default function SearchActivitiesPanel({
   activities,
   onDragStart,
   onDragEnd,
+  onActivityClick,
   disabled = false,
 }: SearchActivitiesPanelProps) {
   return (
@@ -24,9 +26,14 @@ export default function SearchActivitiesPanel({
             draggable={!disabled}
             onDragStart={(e) => !disabled && onDragStart(e, activity)}
             onDragEnd={onDragEnd}
+            onClick={() => {
+              if (!disabled && onActivityClick) {
+                onActivityClick(activity)
+              }
+            }}
             disabled={disabled}
             className={`px-3 py-1 rounded transition-all hover:opacity-80 ${
-              disabled ? 'cursor-not-allowed opacity-50' : 'cursor-move'
+              disabled ? 'cursor-not-allowed opacity-50' : onActivityClick ? 'cursor-pointer' : 'cursor-move'
             }`}
             style={{
               backgroundColor: getColorHex(activity.color),
