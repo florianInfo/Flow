@@ -9,6 +9,13 @@ import SearchActivitiesPanel from './components/SearchActivitiesPanel'
 import { ActivityDelete } from './utils/ActivityDelete'
 import { logApiRequest } from './utils/ApiLogger'
 import { generatePlannedActivities } from './utils/PlannedActivityGenerator'
+import { 
+  getSavedUsers, 
+  saveUserToFile, 
+  loadUserFromFile, 
+  deleteSavedUser,
+  type SavedUser 
+} from './utils/UserSaveUtils'
 
 interface ActivitiesData {
   activities: Activity[]
@@ -101,6 +108,56 @@ function App() {
     }
   }
 
+  // Fonction pour sauvegarder le user
+  const handleSaveUser = async () => {
+    const result = await saveUserToFile(user)
+    if (result.success) {
+      alert(result.message)
+    } else if (result.message !== 'Sauvegarde annulée') {
+      alert(`Erreur: ${result.message}`)
+    }
+  }
+
+  // Fonction pour charger un user depuis un fichier
+  const handleLoadUserFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    loadUserFromFile(
+      file,
+      (loadedUser) => {
+        setUser(loadedUser)
+        localStorage.setItem('user_1', JSON.stringify(loadedUser))
+        alert('User chargé avec succès !')
+      },
+      (error) => {
+        alert('Erreur lors du chargement du fichier. Vérifiez que c\'est un fichier JSON valide.')
+        console.error('Erreur lors du chargement:', error)
+      }
+    )
+    
+    // Réinitialiser l'input pour permettre de recharger le même fichier
+    event.target.value = ''
+  }
+
+  // Fonction pour charger un user depuis la liste des sauvegardes
+  const handleLoadUserFromSave = (savedUser: SavedUser) => {
+    if (window.confirm(`Charger la sauvegarde ${savedUser.filename} ? Cela remplacera le user actuel.`)) {
+      setUser(savedUser.data)
+      localStorage.setItem('user_1', JSON.stringify(savedUser.data))
+      alert('User chargé avec succès !')
+    }
+  }
+
+  // Fonction pour supprimer une sauvegarde de la liste
+  const handleDeleteSave = (filename: string, event: React.MouseEvent) => {
+    event.stopPropagation()
+    if (window.confirm(`Supprimer la sauvegarde ${filename} de la liste ?`)) {
+      deleteSavedUser(filename)
+      alert('Sauvegarde supprimée de la liste')
+    }
+  }
+
   const handleActivityClick = (activity: Activity) => {
     setSelectedActivity(activity)
     setIsModalOpen(true)
@@ -109,6 +166,7 @@ function App() {
   const handleCreateActivity = () => {
     setSelectedActivity(null)
     setIsModalOpen(true)
+    setPlannerMode('routine')
   }
 
   const handleSaveActivity = (activity: Activity) => {
@@ -675,7 +733,14 @@ function App() {
           </button>
         </main>
       ) : viewMode === 'admin' ? (
-        <Admin onResetUser={handleResetUser} />
+        <Admin 
+          onResetUser={handleResetUser}
+          onSaveUser={handleSaveUser}
+          onLoadUserFromFile={handleLoadUserFromFile}
+          savedUsers={getSavedUsers()}
+          onLoadUserFromSave={handleLoadUserFromSave}
+          onDeleteSave={handleDeleteSave}
+        />
       ) : (
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {/* Panneau collapsable pour les activités */}

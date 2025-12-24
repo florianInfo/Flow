@@ -1,12 +1,31 @@
 import { useState, useEffect } from 'react'
 import { AppSettings } from '../models/AppSettings'
 import { useAppSettings } from '../hooks/useAppSettings'
+import { User } from '../models/Planning'
+
+interface SavedUser {
+  filename: string
+  timestamp: number
+  data: User
+}
 
 interface AdminProps {
   onResetUser?: () => void
+  onSaveUser?: () => void
+  onLoadUserFromFile?: (event: React.ChangeEvent<HTMLInputElement>) => void
+  savedUsers?: SavedUser[]
+  onLoadUserFromSave?: (savedUser: SavedUser) => void
+  onDeleteSave?: (filename: string, event: React.MouseEvent) => void
 }
 
-export default function Admin({ onResetUser }: AdminProps) {
+export default function Admin({ 
+  onResetUser,
+  onSaveUser,
+  onLoadUserFromFile,
+  savedUsers = [],
+  onLoadUserFromSave,
+  onDeleteSave,
+}: AdminProps) {
   const { settings, updateSettings, resetSettings } = useAppSettings()
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings)
   const [hasChanges, setHasChanges] = useState(false)
@@ -202,6 +221,99 @@ export default function Admin({ onResetUser }: AdminProps) {
               D'autres sections de paramètres pourront être ajoutées ici à l'avenir.
             </p>
           </section>
+
+          {/* Section Sauvegarde et Chargement */}
+          {(onSaveUser || onLoadUserFromFile) && (
+            <section className="mb-8">
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4 pb-2 border-b">
+                Sauvegarde et Chargement
+              </h2>
+              <div className="space-y-4">
+                {onSaveUser && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-blue-800 mb-2">
+                      Sauvegarder le User
+                    </h3>
+                    <p className="text-blue-700 mb-4">
+                      Sauvegarde le user actuel sous forme de fichier JSON sur votre bureau (user_planner_V1.json, V2, etc.)
+                      {typeof window !== 'undefined' && 'showSaveFilePicker' in window ? (
+                        <span className="block mt-2 text-sm text-blue-600">
+                          ✓ Votre navigateur supporte la sauvegarde directe sur le bureau
+                        </span>
+                      ) : (
+                        <span className="block mt-2 text-sm text-blue-600">
+                          ℹ Le fichier sera téléchargé dans votre dossier de téléchargement. Vous pouvez le déplacer sur votre bureau.
+                        </span>
+                      )}
+                    </p>
+                    <button
+                      onClick={onSaveUser}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      Sauvegarder le User sur le Bureau
+                    </button>
+                  </div>
+                )}
+
+                {onLoadUserFromFile && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-green-800 mb-2">
+                      Charger un User depuis un fichier
+                    </h3>
+                    <p className="text-green-700 mb-4">
+                      Sélectionnez un fichier JSON pour charger un user sauvegardé.
+                    </p>
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={onLoadUserFromFile}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-white hover:file:bg-green-700"
+                    />
+                  </div>
+                )}
+
+                {savedUsers && savedUsers.length > 0 && onLoadUserFromSave && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                      Sauvegardes récentes
+                    </h3>
+                    <p className="text-gray-600 mb-4 text-sm">
+                      Cliquez sur une sauvegarde pour la charger. Les fichiers sont stockés dans votre navigateur.
+                    </p>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {savedUsers
+                        .sort((a, b) => b.timestamp - a.timestamp)
+                        .map((savedUser) => (
+                          <div
+                            key={savedUser.filename}
+                            onClick={() => onLoadUserFromSave(savedUser)}
+                            className="flex items-center justify-between p-3 bg-white border border-gray-300 rounded hover:bg-gray-100 cursor-pointer transition-colors"
+                          >
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-800">
+                                {savedUser.filename}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {new Date(savedUser.timestamp).toLocaleString('fr-FR')}
+                              </div>
+                            </div>
+                            {onDeleteSave && (
+                              <button
+                                onClick={(e) => onDeleteSave(savedUser.filename, e)}
+                                className="ml-2 px-2 py-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Supprimer de la liste"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Section Réinitialisation du User */}
           {onResetUser && (
