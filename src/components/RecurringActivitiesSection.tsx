@@ -27,7 +27,7 @@ export default function RecurringActivitiesSection({
   getCurrentActivity,
   isOpen,
 }: RecurringActivitiesSectionProps) {
-  const [isRecurringOpen, setIsRecurringOpen] = useState(false)
+  const [isRecurringOpen, setIsRecurringOpen] = useState(true)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [isCreatingNewRecurring, setIsCreatingNewRecurring] = useState(false)
@@ -95,12 +95,17 @@ export default function RecurringActivitiesSection({
   }, [shouldSave, onSave])
 
   // Réinitialiser les états de recherche et cacher l'input d'ajout quand la modal se ferme
+  // Ouvrir la section par défaut quand la modal s'ouvre
   useEffect(() => {
     if (!isOpen) {
       setIsCreatingNewRecurring(false)
       setNewRecurringTitle('')
       setSearchResults([])
       setShowDropdown(false)
+      setIsRecurringOpen(true) // Réinitialiser à ouvert quand la modal se ferme
+    } else {
+      // Ouvrir la section quand la modal s'ouvre
+      setIsRecurringOpen(true)
     }
   }, [isOpen])
 

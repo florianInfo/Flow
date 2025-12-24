@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react'
 import { AppSettings } from '../models/AppSettings'
 import { useAppSettings } from '../hooks/useAppSettings'
 
-export default function Admin() {
+interface AdminProps {
+  onResetUser?: () => void
+}
+
+export default function Admin({ onResetUser }: AdminProps) {
   const { settings, updateSettings, resetSettings } = useAppSettings()
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings)
   const [hasChanges, setHasChanges] = useState(false)
@@ -198,6 +202,29 @@ export default function Admin() {
               D'autres sections de paramètres pourront être ajoutées ici à l'avenir.
             </p>
           </section>
+
+          {/* Section Réinitialisation du User */}
+          {onResetUser && (
+            <section className="mb-8">
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4 pb-2 border-b">
+                Réinitialisation
+              </h2>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-red-800 mb-2">
+                  Zone de danger
+                </h3>
+                <p className="text-red-700 mb-4">
+                  Cette action va supprimer toutes vos activités, templates et calendriers et créer un nouveau user vierge avec un calendrier et un template par défaut.
+                </p>
+                <button
+                  onClick={onResetUser}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors font-medium"
+                >
+                  Réinitialiser le User
+                </button>
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </div>

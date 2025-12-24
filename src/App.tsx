@@ -85,6 +85,22 @@ function App() {
     }
   }
 
+  const handleResetUser = () => {
+    if (window.confirm('Êtes-vous sûr de vouloir réinitialiser complètement le user ? Toutes les activités, templates et calendriers seront supprimés.')) {
+      const newUser: User = {
+        id: 1,
+        activities: [],
+        templates: [{ id: 1, userId: 1, scheduledActivities: [] }],
+        calendars: [{ id: 1, name: 'Calendrier principal', plannedActivities: [] }],
+      }
+      setUser(newUser)
+      // Supprimer aussi le localStorage pour forcer le rechargement
+      localStorage.removeItem('user_1')
+      localStorage.setItem('user_1', JSON.stringify(newUser))
+      alert('User réinitialisé avec succès !')
+    }
+  }
+
   const handleActivityClick = (activity: Activity) => {
     setSelectedActivity(activity)
     setIsModalOpen(true)
@@ -634,7 +650,9 @@ function App() {
       {viewMode === 'activities' ? (
         <main className="flex items-center justify-center min-h-[calc(100vh-200px)] px-4 py-8 select-none flex-1">
           <div className="flex flex-wrap justify-center items-center gap-4 max-w-6xl select-none">
-            {user.activities.map((activity, index) => (
+            {user.activities
+              .filter(activity => activity.recurringActivities && activity.recurringActivities.length > 0)
+              .map((activity, index) => (
               <div
                 key={activity.id || index}
                 style={getRandomTransform()}
@@ -657,7 +675,7 @@ function App() {
           </button>
         </main>
       ) : viewMode === 'admin' ? (
-        <Admin />
+        <Admin onResetUser={handleResetUser} />
       ) : (
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {/* Panneau collapsable pour les activités */}
@@ -674,7 +692,9 @@ function App() {
             {isActivitiesPanelOpen && (
               <div className="border-t">
                 <SearchActivitiesPanel
-                  activities={user.activities}
+                  activities={user.activities.filter(activity => 
+                    activity.recurringActivities && activity.recurringActivities.length > 0
+                  )}
                   onDragStart={(e, activity) => {
                     e.dataTransfer.effectAllowed = 'move'
                     e.dataTransfer.setData('activity', JSON.stringify(activity))
