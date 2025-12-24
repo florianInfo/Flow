@@ -3,6 +3,10 @@ import { Activity } from '../models/Activity'
 import { ScheduledActivity, PlannedActivity } from '../models/Planning'
 import { getColorHex, getTextColor } from '../utils/ColorUtils'
 import { useAppSettings } from '../hooks/useAppSettings'
+import { timeToMinutes, minutesToTime, adjustTimeBounds } from '../utils/TimeUtils'
+import { getWeekStart, generateWeekDays, generateRoutineWeekDays } from '../utils/DateUtils'
+import { getSlotFromMousePosition, PlannerDimensions, detectScrollZone, validateDuration, calculateActivityPosition } from '../utils/PlannerPositionUtils'
+import { getOverlappingActivities } from '../utils/ActivityOverlapUtils'
 import PlannerIcon from './PlannerIcon'
 import CalendarIcon from './CalendarIcon'
 
@@ -99,10 +103,7 @@ export default function Planner({
       // En mode routine, on n'utilise pas de dates réelles
       return null
     }
-    const start = new Date(internalCurrentWeek)
-    const day = start.getDay()
-    const diff = start.getDate() - day + (day === 0 ? -6 : 1) // Ajuster pour lundi
-    return new Date(start.setDate(diff))
+    return getWeekStart(internalCurrentWeek)
   }, [internalCurrentWeek, mode])
 
   // Générer les jours de la semaine
@@ -110,37 +111,11 @@ export default function Planner({
     if (mode === 'routine') {
       // En mode routine, on génère juste les jours de la semaine (1 = lundi, 7 = dimanche)
       // On utilise des dates fictives pour la structure, mais on ne les affiche pas
-      return Array.from({ length: 7 }, (_, i) => {
-        // Créer une date de référence (lundi de la semaine courante) mais on ne l'utilise que pour la structure
-        const today = new Date()
-        const day = today.getDay()
-        const diff = today.getDate() - day + (day === 0 ? -6 : 1) // Ajuster pour lundi
-        const monday = new Date(today.setDate(diff))
-        const date = new Date(monday)
-        date.setDate(date.getDate() + i)
-        return date
-      })
+      return generateRoutineWeekDays()
     }
     // En mode calendrier, on utilise les dates réelles
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(weekStart!)
-      date.setDate(date.getDate() + i)
-      return date
-    })
+    return generateWeekDays(weekStart!)
   }, [weekStart, mode])
-
-  // Convertir HH:mm en minutes depuis minuit
-  const timeToMinutes = (time: string): number => {
-    const [hours, minutes] = time.split(':').map(Number)
-    return hours * 60 + minutes
-  }
-
-  // Convertir minutes en HH:mm
-  const minutesToTime = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
-  }
 
   // Gérer le drag d'une activité scheduled existante
   const handleScheduledActivityDragStart = (e: React.DragEvent, scheduled: ScheduledActivity) => {
@@ -151,40 +126,6 @@ export default function Planner({
     setSelectedPlannedActivity(null)
   }
 
-  // Fonction utilitaire pour ajuster les heures dans les limites
-  const adjustTimeBounds = (
-    hour: number, 
-    minute: number, 
-    duration: number
-  ): { startMinutes: number; endMinutes: number } | null => {
-    let startMinutes = hour * 60 + minute
-    let endMinutes = startMinutes + duration
-    const maxMinutes = (END_HOUR + 1) * 60
-    const minMinutes = START_HOUR * 60
-    
-    // Ajuster si l'activité dépasse la limite supérieure
-    if (endMinutes > maxMinutes) {
-      endMinutes = maxMinutes
-      startMinutes = endMinutes - duration
-    }
-    
-    // Ajuster si l'activité commence avant la limite inférieure
-    if (startMinutes < minMinutes) {
-      startMinutes = minMinutes
-      endMinutes = startMinutes + duration
-      // Si après ajustement, ça dépasse encore, limiter
-      if (endMinutes > maxMinutes) {
-        endMinutes = maxMinutes
-        startMinutes = endMinutes - duration
-        // Si la durée est trop grande, ne pas permettre
-        if (startMinutes < minMinutes) {
-          return null
-        }
-      }
-    }
-    
-    return { startMinutes, endMinutes }
-  }
 
   // Fonction utilitaire pour nettoyer après un drop
   const cleanupAfterDrop = () => {
@@ -203,7 +144,7 @@ export default function Planner({
     hour: number, 
     minute: number
   ) => {
-    const adjusted = adjustTimeBounds(hour, minute, DEFAULT_ACTIVITY_DURATION)
+    const adjusted = adjustTimeBounds(hour, minute, DEFAULT_ACTIVITY_DURATION, START_HOUR, END_HOUR)
     if (!adjusted) return
     
     const { startMinutes, endMinutes } = adjusted
@@ -225,7 +166,7 @@ export default function Planner({
     minute: number
   ) => {
     const duration = timeToMinutes(planned.endTime) - timeToMinutes(planned.startTime)
-    const adjusted = adjustTimeBounds(hour, minute, duration)
+    const adjusted = adjustTimeBounds(hour, minute, duration, START_HOUR, END_HOUR)
     if (!adjusted) return
     
     const { startMinutes, endMinutes } = adjusted
@@ -267,7 +208,7 @@ export default function Planner({
     minute: number
   ) => {
     const duration = timeToMinutes(scheduled.endTime) - timeToMinutes(scheduled.startTime)
-    const adjusted = adjustTimeBounds(hour, minute, duration)
+    const adjusted = adjustTimeBounds(hour, minute, duration, START_HOUR, END_HOUR)
     if (!adjusted) return
     
     const { startMinutes, endMinutes } = adjusted
@@ -373,30 +314,6 @@ export default function Planner({
     })
   }
 
-  // Calculer le slot à partir des coordonnées de la souris
-  const getSlotFromMousePosition = (e: React.DragEvent): { hour: number; minute: number } | null => {
-    if (!plannerRef.current) return null
-    
-    const rect = plannerRef.current.getBoundingClientRect()
-    // Le header sticky a une hauteur de 48px (h-12)
-    // On soustrait la hauteur du header et on ajoute scrollTop pour obtenir la position absolue dans le contenu scrollé
-    const HEADER_HEIGHT = 48 // h-12 = 48px
-    const currentScrollTop = plannerRef.current.scrollTop
-    const relativeY = e.clientY - rect.top - HEADER_HEIGHT + currentScrollTop
-    
-    if (relativeY < 0) return null
-    
-    const totalMinutes = (relativeY / SLOT_HEIGHT) * 60
-    const hour = Math.floor(totalMinutes / 60) + START_HOUR
-    const minute = Math.floor((totalMinutes % 60) / SLOT_MINUTES) * SLOT_MINUTES
-    
-    // Permettre jusqu'à 23:00 pour le drag (END_HOUR + 1)
-    if (hour < START_HOUR || hour > END_HOUR + 1) return null
-    // Limiter à 23:00 maximum
-    if (hour === END_HOUR + 1 && minute > 0) return null
-    
-    return { hour, minute }
-  }
 
   // Gérer le drag over sur une activité avec throttling pour éviter les tremblements
   const handleActivityDragOver = (e: React.DragEvent, day: Date, activityId?: number) => {
@@ -415,24 +332,29 @@ export default function Planner({
     if (plannerRef.current) {
       const rect = plannerRef.current.getBoundingClientRect()
       const mouseYRelativeToViewport = e.clientY - rect.top
-      
-      if (mouseYRelativeToViewport < SCROLL_THRESHOLD && plannerRef.current.scrollTop > 0) {
-        setScrollCursor('up')
-      } else if (mouseYRelativeToViewport > rect.height - SCROLL_THRESHOLD) {
-        const maxScroll = plannerRef.current.scrollHeight - plannerRef.current.clientHeight
-        if (plannerRef.current.scrollTop < maxScroll) {
-          setScrollCursor('down')
-        } else {
-          setScrollCursor(null)
-        }
-      } else {
-        setScrollCursor(null)
-      }
+      const scrollZone = detectScrollZone(
+        mouseYRelativeToViewport,
+        rect.height,
+        plannerRef.current.scrollTop,
+        plannerRef.current.scrollHeight,
+        plannerRef.current.clientHeight,
+        SCROLL_THRESHOLD
+      )
+      setScrollCursor(scrollZone)
     }
     
     // Utiliser requestAnimationFrame pour améliorer la fluidité
     requestAnimationFrame(() => {
-      const slot = getSlotFromMousePosition(e)
+      if (!plannerRef.current) return
+      const rect = plannerRef.current.getBoundingClientRect()
+      const dimensions: PlannerDimensions = {
+        slotHeight: SLOT_HEIGHT,
+        slotMinutes: SLOT_MINUTES,
+        startHour: START_HOUR,
+        endHour: END_HOUR,
+        headerHeight: 48
+      }
+      const slot = getSlotFromMousePosition(e.clientY, rect, plannerRef.current.scrollTop, dimensions)
       if (slot) {
         setHoveredSlot({ day, hour: slot.hour, minute: slot.minute })
       }
@@ -452,7 +374,16 @@ export default function Planner({
     e.preventDefault()
     e.stopPropagation()
     
-    const slot = getSlotFromMousePosition(e)
+    if (!plannerRef.current) return
+    const rect = plannerRef.current.getBoundingClientRect()
+    const dimensions: PlannerDimensions = {
+      slotHeight: SLOT_HEIGHT,
+      slotMinutes: SLOT_MINUTES,
+      startHour: START_HOUR,
+      endHour: END_HOUR,
+      headerHeight: 48
+    }
+    const slot = getSlotFromMousePosition(e.clientY, rect, plannerRef.current.scrollTop, dimensions)
     if (slot) {
       handleDrop(e, day, slot.hour, slot.minute)
     }
@@ -464,87 +395,20 @@ export default function Planner({
     setScrollCursor(null)
   }
 
-  // Détecter les chevauchements et calculer la position/largeur des activités
-  const getOverlappingActivities = (plannedActivities: PlannedActivity[], day: Date) => {
-    const dateStr = day.toISOString().split('T')[0]
-    const dayActivities = plannedActivities.filter(p => p.date === dateStr)
-    
-    // Trier par heure de début
-    const sorted = [...dayActivities].sort((a, b) => 
-      timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
-    )
-    
-    // Grouper les activités qui se chevauchent
-    const groups: PlannedActivity[][] = []
-    
-    sorted.forEach(activity => {
-      const start = timeToMinutes(activity.startTime)
-      const end = timeToMinutes(activity.endTime)
-      
-      // Trouver un groupe où cette activité chevauche
-      let addedToGroup = false
-      for (const group of groups) {
-        // Vérifier si l'activité chevauche avec au moins une activité du groupe
-        const overlaps = group.some(groupActivity => {
-          const groupStart = timeToMinutes(groupActivity.startTime)
-          const groupEnd = timeToMinutes(groupActivity.endTime)
-          return (start < groupEnd && end > groupStart)
-        })
-        
-        if (overlaps) {
-          group.push(activity)
-          addedToGroup = true
-          break
-        }
-      }
-      
-      // Si aucune chevauchement, créer un nouveau groupe
-      if (!addedToGroup) {
-        groups.push([activity])
-      }
-    })
-    
-    // Calculer la position et largeur pour chaque activité dans chaque groupe
-    const activityPositions = new Map<number, { left: number; width: number }>()
-    
-    groups.forEach(group => {
-      if (group.length === 1) {
-        // Une seule activité, prend toute la largeur
-        activityPositions.set(group[0].id || 0, { left: 0, width: 100 })
-      } else {
-        // Plusieurs activités, les répartir horizontalement
-        const width = 100 / group.length
-        group.forEach((activity, index) => {
-          activityPositions.set(activity.id || 0, {
-            left: index * width,
-            width: width
-          })
-        })
-      }
-    })
-    
-    return activityPositions
-  }
 
   // Calculer la position et la hauteur d'une activité planifiée
   const getActivityStyle = (planned: PlannedActivity, day: Date, allPlanned: PlannedActivity[]): React.CSSProperties | null => {
     const dateStr = day.toISOString().split('T')[0]
     if (planned.date !== dateStr) return null
 
-    const start = timeToMinutes(planned.startTime)
-    const end = timeToMinutes(planned.endTime)
-    const duration = end - start
-
     const activity = activities.find(a => a.id === planned.activityId)
     if (!activity) return null
 
-    // Ajuster la position en soustrayant les heures avant START_HOUR
-    const startMinutesFromStart = start - (START_HOUR * 60)
-    const top = (startMinutesFromStart / 60) * SLOT_HEIGHT
-    const height = (duration / 60) * SLOT_HEIGHT
+    // Calculer la position top et height
+    const { top, height } = calculateActivityPosition(planned.startTime, planned.endTime, START_HOUR, SLOT_HEIGHT)
 
     // Calculer la position et largeur en fonction des chevauchements
-    const positions = getOverlappingActivities(allPlanned, day)
+    const positions = getOverlappingActivities(allPlanned, day, timeToMinutes)
     const position = positions.get(planned.id || 0) || { left: 0, width: 100 }
     
     const isSelected = selectedPlannedActivity?.id === planned.id
@@ -607,13 +471,13 @@ export default function Planner({
     if (!activity) return null
 
     // Calculer la position et la hauteur du preview en utilisant adjustTimeBounds
-    const adjusted = adjustTimeBounds(hoveredSlot.hour, hoveredSlot.minute, duration)
+    const adjusted = adjustTimeBounds(hoveredSlot.hour, hoveredSlot.minute, duration, START_HOUR, END_HOUR)
     if (!adjusted) return null
     
     const { startMinutes: previewStartMinutes } = adjusted
-    const previewStartMinutesFromStart = previewStartMinutes - (START_HOUR * 60)
-    const top = (previewStartMinutesFromStart / 60) * SLOT_HEIGHT
-    const height = (duration / 60) * SLOT_HEIGHT
+    const previewTime = minutesToTime(previewStartMinutes)
+    const previewEndTime = minutesToTime(previewStartMinutes + duration)
+    const { top, height } = calculateActivityPosition(previewTime, previewEndTime, START_HOUR, SLOT_HEIGHT)
 
     return {
       position: 'absolute',
@@ -658,21 +522,16 @@ export default function Planner({
     const rect = plannerRef.current.getBoundingClientRect()
     
     // Détecter si on est dans la zone de scroll (le scroll sera géré par l'effet)
-    const mouseYRelativeToViewport = e.clientY - rect.top 
-    
-    // Détecter la zone de scroll pour changer le curseur
-    if (mouseYRelativeToViewport < SCROLL_THRESHOLD && plannerRef.current.scrollTop > 0) {
-      setScrollCursor('up')
-    } else if (mouseYRelativeToViewport > rect.height - SCROLL_THRESHOLD) {
-      const maxScroll = plannerRef.current.scrollHeight - plannerRef.current.clientHeight
-      if (plannerRef.current.scrollTop < maxScroll) {
-        setScrollCursor('down')
-      } else {
-        setScrollCursor(null)
-      }
-    } else {
-      setScrollCursor(null)
-    }
+    const mouseYRelativeToViewport = e.clientY - rect.top
+    const scrollZone = detectScrollZone(
+      mouseYRelativeToViewport,
+      rect.height,
+      plannerRef.current.scrollTop,
+      plannerRef.current.scrollHeight,
+      plannerRef.current.clientHeight,
+      SCROLL_THRESHOLD
+    )
+    setScrollCursor(scrollZone)
     
     // Prendre en compte le scroll actuel pour calculer la position relative correcte
     // Le header sticky a une hauteur de 48px (h-12)
@@ -691,7 +550,6 @@ export default function Planner({
     if (hour === END_HOUR + 1 && minute > 0) return
 
     const newTime = minutesToTime(hour * 60 + minute)
-    const maxMinutes = (END_HOUR + 1) * 60 // 23:00 = 1380 minutes
     
     if (selectedPlannedActivity) {
       // Si la plannedActivity a un scheduledActivityId, on va modifier la scheduledActivity source
@@ -707,9 +565,7 @@ export default function Planner({
           }
           
           // Vérifier que endTime > startTime et que l'activité ne dépasse pas 23:00
-          const start = timeToMinutes(updatedPlanned.startTime)
-          const end = timeToMinutes(updatedPlanned.endTime)
-          if (end > start && end - start >= 15 && end <= maxMinutes) { // Minimum 15 minutes et max 23:00
+          if (validateDuration(updatedPlanned.startTime, updatedPlanned.endTime, END_HOUR, timeToMinutes)) {
             setSelectedPlannedActivity(updatedPlanned)
             // On stocke aussi la scheduledActivity mise à jour pour la sauvegarder à la fin
             const updatedScheduled: ScheduledActivity = {
@@ -732,9 +588,7 @@ export default function Planner({
       }
       
       // Vérifier que endTime > startTime et que l'activité ne dépasse pas 23:00
-      const start = timeToMinutes(updated.startTime)
-      const end = timeToMinutes(updated.endTime)
-      if (end > start && end - start >= 15 && end <= maxMinutes) { // Minimum 15 minutes et max 23:00
+      if (validateDuration(updated.startTime, updated.endTime, END_HOUR, timeToMinutes)) {
         setSelectedPlannedActivity(updated)
         // Ne pas appeler onPlannedActivityUpdate ici, seulement à la fin du resize
       }
@@ -746,9 +600,7 @@ export default function Planner({
       }
       
       // Vérifier que endTime > startTime et que l'activité ne dépasse pas 23:00
-      const start = timeToMinutes(updated.startTime)
-      const end = timeToMinutes(updated.endTime)
-      if (end > start && end - start >= 15 && end <= maxMinutes) { // Minimum 15 minutes et max 23:00
+      if (validateDuration(updated.startTime, updated.endTime, END_HOUR, timeToMinutes)) {
         setSelectedScheduledActivity(updated)
         // Ne pas appeler onScheduledActivityUpdate ici, seulement à la fin du resize
       }
@@ -1126,7 +978,7 @@ export default function Planner({
                     // En mode routine, on n'a que les scheduled, pas de planned
                     const allActivitiesForDay: PlannedActivity[] = scheduledAsPlanned
                     
-                    const positions = getOverlappingActivities(allActivitiesForDay, day)
+                    const positions = getOverlappingActivities(allActivitiesForDay, day, timeToMinutes)
                     
                     return dayScheduledUpdated.map(scheduled => {
                       // Utiliser l'activité sélectionnée mise à jour si elle correspond
