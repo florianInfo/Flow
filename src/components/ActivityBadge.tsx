@@ -1,5 +1,5 @@
 import { Activity } from '../models/Activity'
-import { getColorHex, getTextColor } from '../utils/ColorUtils'
+import { getColorHex } from '../utils/ColorUtils'
 
 interface ActivityBadgeProps {
   activity: Activity
@@ -9,27 +9,22 @@ interface ActivityBadgeProps {
 export default function ActivityBadge({ activity, onDelete }: ActivityBadgeProps) {
   const backgroundColor = getColorHex(activity.color)
   const recurringCount = activity.recurringActivities?.length || 0
-  const textColor = getTextColor(backgroundColor)
 
   return (
     <div
-      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md shadow-sm cursor-pointer hover:scale-110 hover:rotate-2 transition-all duration-300 ease-in-out"
+      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full shadow-sm cursor-pointer hover:scale-110 hover:rotate-2 transition-all duration-300 ease-in-out"
       style={{
         backgroundColor,
-        color: textColor,
       }}
     >
-      <span className="font-medium cursor-pointer">{activity.title}</span>
-      <span className="text-sm opacity-90 cursor-pointer">({recurringCount})</span>
+      <span className="font-medium cursor-pointer text-black">{activity.title}</span>
+      <span className="text-sm text-gray-600 cursor-pointer">({recurringCount})</span>
       <button
         onClick={(e) => {
           e.stopPropagation()
           onDelete(activity.id)
         }}
-        className="ml-1 cursor-pointer hover:opacity-70 hover:scale-125 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded"
-        style={{
-          color: textColor,
-        }}
+        className="ml-1 cursor-pointer hover:opacity-70 hover:scale-125 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-full text-black"
         aria-label="Supprimer l'activité"
       >
         <svg

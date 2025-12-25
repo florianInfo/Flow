@@ -671,7 +671,7 @@ export default function Planner({
                 <div className="flex items-center justify-center relative z-10">
                   <button
                     onClick={() => setMode('routine')}
-                    className={`flex items-center justify-center transition-all rounded ${
+                    className={`flex items-center justify-center transition-all rounded-full ${
                       mode === 'routine' 
                         ? 'bg-gray-700 text-white' 
                         : 'bg-transparent hover:bg-gray-200'
@@ -693,7 +693,7 @@ export default function Planner({
                 <div className="flex items-center justify-center relative z-10">
                   <button
                     onClick={() => setMode('calendrier')}
-                    className={`flex items-center justify-center transition-all rounded ${
+                    className={`flex items-center justify-center transition-all rounded-full ${
                       mode === 'calendrier' 
                         ? 'bg-gray-700 text-white' 
                         : 'bg-transparent hover:bg-gray-200'
@@ -933,7 +933,7 @@ export default function Planner({
         <div className="p-2 border-t bg-gray-50 flex items-center justify-between">
           <button
             onClick={handlePreviousWeek}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+            className="px-4 py-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors"
           >
             ← Semaine précédente
           </button>
@@ -942,7 +942,7 @@ export default function Planner({
           </div>
           <button
             onClick={handleNextWeek}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+            className="px-4 py-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors"
           >
             Semaine suivante →
           </button>

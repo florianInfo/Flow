@@ -7,7 +7,6 @@ interface RecurringActivitiesSectionProps {
   activities: Activity[]
   currentActivityId: number | undefined
   backgroundColor: string
-  textColor: string
   onUpdate: (recurringActivities: RecurringActivity[]) => void
   onActivityClick?: (activityId: number) => void
   onSave: (activity: Activity) => void
@@ -20,7 +19,6 @@ export default function RecurringActivitiesSection({
   activities,
   currentActivityId,
   backgroundColor,
-  textColor,
   onUpdate,
   onActivityClick,
   onSave,
@@ -308,8 +306,7 @@ export default function RecurringActivitiesSection({
   }
 
   return (
-    <div className="border-2 flex flex-col rounded" style={{ 
-      borderColor: textColor === '#FFFFFF' ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)',
+    <div className="border-2 border-black flex flex-col rounded-2xl" style={{ 
       height: '40%',
       maxHeight: '40vh'
     }}>
@@ -320,32 +317,30 @@ export default function RecurringActivitiesSection({
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className={`h-5 w-5 cursor-pointer transition-transform ${isRecurringOpen ? 'rotate-90' : ''}`}
+            className={`h-5 w-5 cursor-pointer transition-transform text-black ${isRecurringOpen ? 'rotate-90' : ''}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth={2}
-            style={{ color: textColor }}
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
-          <span className="font-medium cursor-pointer">
+          <span className="font-medium cursor-pointer text-black">
             Activités récurrentes ({recurringActivities?.length || 0})
           </span>
         </button>
         <button
           onClick={handleCreateNewRecurring}
-          className="p-1 cursor-pointer hover:bg-gray-100 rounded transition-colors mr-2"
+          className="p-1 cursor-pointer [&_*]:cursor-pointer hover:bg-gray-100 rounded-full transition-colors mr-2"
           aria-label="Ajouter une activité récurrente"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
+            className="h-5 w-5 text-black"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth={2}
-            style={{ color: textColor }}
           >
             <path
               strokeLinecap="round"
@@ -357,11 +352,11 @@ export default function RecurringActivitiesSection({
       </div>
       
       {isRecurringOpen && (
-        <div className="min-h-40 border-t flex-1 overflow-y-auto" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
+        <div className="min-h-40 border-t border-black flex-1 overflow-y-auto">
           <div className="p-2">
             {isCreatingNewRecurring && (
               <div className="relative mb-2">
-                <div className="p-2 rounded flex items-center justify-between border" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)' }}>
+                <div className="p-2 rounded flex items-center justify-between border border-black">
                   <input
                     ref={searchInputRef}
                     type="text"
@@ -385,28 +380,25 @@ export default function RecurringActivitiesSection({
                       }
                     }}
                     placeholder="Rechercher ou créer une activité"
-                    className="flex-1 border outline-none focus:ring-2 rounded px-2 py-1 mr-2"
+                    className="flex-1 border border-black outline-none focus:ring-2 rounded px-2 py-1 mr-2 text-black bg-transparent"
                     style={{
-                      '--tw-ring-color': textColor,
-                      backgroundColor: 'transparent',
-                      color: textColor
+                      '--tw-ring-color': '#000000',
                     } as React.CSSProperties}
                     autoFocus
                   />
                   <div className="flex items-center gap-1">
                     <button
                       onClick={handleValidateNewRecurring}
-                      className="p-1 cursor-pointer hover:bg-gray-100 rounded transition-colors"
+                      className="p-1 cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
                       aria-label="Valider"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
+                        className="h-5 w-5 text-black"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
                         strokeWidth={2}
-                        style={{ color: textColor }}
                       >
                         <path
                           strokeLinecap="round"
@@ -417,17 +409,16 @@ export default function RecurringActivitiesSection({
                     </button>
                     <button
                       onClick={handleCancelNewRecurring}
-                      className="p-1 cursor-pointer hover:bg-gray-100 rounded transition-colors"
+                      className="p-1 cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
                       aria-label="Annuler"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
+                        className="h-5 w-5 text-black"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
                         strokeWidth={2}
-                        style={{ color: textColor }}
                       >
                         <path
                           strokeLinecap="round"
@@ -441,25 +432,20 @@ export default function RecurringActivitiesSection({
                 {showDropdown && searchResults.length > 0 && (
                   <div
                     ref={dropdownRef}
-                    className="absolute z-20 w-full mt-1 border rounded shadow-lg max-h-60 overflow-y-auto"
+                    className="absolute z-20 w-full mt-1 border border-black rounded shadow-lg max-h-60 overflow-y-auto"
                     style={{
                       backgroundColor: backgroundColor,
-                      borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
-                      color: textColor
                     }}
                   >
                     {searchResults.map((result) => (
                       <button
                         key={result.id}
                         onClick={() => handleSelectExistingActivity(result)}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b last:border-b-0"
-                        style={{
-                          borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b border-black last:border-b-0 text-black"
                       >
                         <div className="font-medium">{result.title}</div>
                         {result.description && (
-                          <div className="text-sm opacity-75 truncate">{result.description}</div>
+                          <div className="text-sm text-gray-600 truncate">{result.description}</div>
                         )}
                       </button>
                     ))}
@@ -482,8 +468,8 @@ export default function RecurringActivitiesSection({
                       onDragEnd={handleDragEnd}
                       className={`p-2 rounded cursor-move flex items-center justify-between ${draggedIndex === index ? 'opacity-50' : ''}`}
                       style={{
-                        borderBottom: dragOverIndex === index && draggedIndex !== null && draggedIndex < index ? `2px solid ${textColor}` : 'none',
-                        borderTop: dragOverIndex === index && draggedIndex !== null && draggedIndex > index ? `2px solid ${textColor}` : 'none'
+                        borderBottom: dragOverIndex === index && draggedIndex !== null && draggedIndex < index ? '2px solid #000000' : 'none',
+                        borderTop: dragOverIndex === index && draggedIndex !== null && draggedIndex > index ? '2px solid #000000' : 'none'
                       }}
                     >
                       <button
@@ -492,16 +478,7 @@ export default function RecurringActivitiesSection({
                             onActivityClick(recurring.targetedActivityId)
                           }
                         }}
-                        className="underline cursor-pointer transition-colors text-left"
-                        style={{ 
-                          color: textColor === '#FFFFFF' ? '#93C5FD' : '#2563EB',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = textColor === '#FFFFFF' ? '#DBEAFE' : '#1D4ED8'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = textColor === '#FFFFFF' ? '#93C5FD' : '#2563EB'
-                        }}
+                        className="underline cursor-pointer transition-colors text-left text-blue-600 hover:text-blue-800"
                         disabled={!onActivityClick || !targetActivity}
                       >
                         {getActivityName(recurring.targetedActivityId)}
@@ -518,32 +495,29 @@ export default function RecurringActivitiesSection({
                           }}
                           onClick={(e) => e.stopPropagation()}
                           onDragStart={(e) => e.stopPropagation()}
-                          className="w-16 text-right border outline-none focus:ring-2 rounded px-1 py-0.5"
+                          className="w-16 text-right border border-black outline-none focus:ring-2 rounded px-1 py-0.5 text-black bg-transparent"
                           style={{
-                            '--tw-ring-color': textColor,
-                            backgroundColor: 'transparent',
-                            color: textColor
+                            '--tw-ring-color': '#000000',
                           } as React.CSSProperties}
                         />
-                        <span>%</span>
+                        <span className="text-black">%</span>
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
                             handleDeleteRecurring(index)
                           }}
                           onDragStart={(e) => e.stopPropagation()}
-                          className="p-1 cursor-pointer hover:bg-gray-100 rounded transition-colors ml-1"
+                          className="p-1 cursor-pointer hover:bg-gray-100 rounded-full transition-colors ml-1"
                           aria-label="Supprimer cette activité récurrente"
                           title="Supprimer"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
+                            className="h-4 w-4 text-black"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
                             strokeWidth={2}
-                            style={{ color: textColor }}
                           >
                             <path
                               strokeLinecap="round"
@@ -559,7 +533,7 @@ export default function RecurringActivitiesSection({
               </ul>
             ) : (
               !isCreatingNewRecurring && (
-                <p className="italic text-sm opacity-75">Aucune activité récurrente</p>
+                <p className="italic text-sm text-gray-600">Aucune activité récurrente</p>
               )
             )}
           </div>

@@ -1,6 +1,6 @@
 import { Activity } from '../models/Activity'
 import { PlannedActivity, ScheduledActivity } from '../models/Planning'
-import { getColorHex, getTextColor } from './ColorUtils'
+import { getColorHex } from './ColorUtils'
 import { calculateActivityPosition } from './PlannerPositionUtils'
 import { adjustTimeBounds } from './TimeUtils'
 
@@ -67,7 +67,7 @@ export function calculateHoverPreviewStyle(
     borderRadius: '4px',
     zIndex: 30,
     pointerEvents: 'none',
-    border: `2px dashed ${getTextColor(getColorHex(activity.color))}`,
+    border: '2px dashed #000000',
     boxSizing: 'border-box',
   }
 }

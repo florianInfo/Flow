@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Activity, RecurringActivity, Color } from '../models/Activity'
 import { ScheduledActivity, Periodicity } from '../models/Planning'
-import { getColorHex, getTextColor } from '../utils/ColorUtils'
+import { getColorHex } from '../utils/ColorUtils'
 import RecurringActivitiesSection from './RecurringActivitiesSection'
 
 interface ActivityModalProps {
@@ -199,16 +199,15 @@ export default function ActivityModal({
   }
 
   const backgroundColor = getColorHex(formData.color)
-  const textColor = getTextColor(backgroundColor)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div 
-        className="shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded"
-        style={{ backgroundColor, color: textColor }}
+        className="shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded-3xl p-4"
+        style={{ backgroundColor }}
       >
         {/* Header */}
-        <div className="flex items-start justify-between mb-2" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
+        <div className="flex items-start justify-between mb-2 border-b border-black">
           <div className="flex-1">
             {isEditingTitle ? (
               <input
@@ -228,15 +227,15 @@ export default function ActivityModal({
                   }
                 }}
                 placeholder="Titre de l'activité"
-                className="text-2xl cursor-text font-bold w-full border outline-none focus:ring-2 px-2 py-1"
+                className="text-2xl cursor-text font-bold w-full border outline-none focus:ring-2 px-2 py-1 text-black"
                 style={{ 
-                  '--tw-ring-color': textColor,
+                  '--tw-ring-color': '#000000',
                   backgroundColor: 'transparent'
                 } as React.CSSProperties}
               />
             ) : (
               <h2 
-                className={`text-2xl font-bold px-4 pt-1 ${readOnly ? 'cursor-default' : 'cursor-text'} ${!formData.title ? 'opacity-50' : ''}`}
+                className={`text-2xl font-bold px-4 pt-1 text-black ${readOnly ? 'cursor-default' : 'cursor-text'} ${!formData.title ? 'opacity-50' : ''}`}
                 onClick={readOnly ? undefined : () => setIsEditingTitle(true)}
               >
                 {formData.title || "Titre de l'activité"}
@@ -257,17 +256,16 @@ export default function ActivityModal({
                   }
                 }}
                 placeholder="Description de l'activité"
-                className="italic p-2 cursor-text w-full border outline-none focus:ring-2 rounded resize-none opacity-90"
+                className="italic p-2 cursor-text w-full border outline-none focus:ring-2 rounded resize-none text-gray-600"
                 style={{ 
-                  color: textColor, 
                   backgroundColor: 'transparent',
-                  '--tw-ring-color': textColor 
+                  '--tw-ring-color': '#000000' 
                 } as React.CSSProperties}
                 rows={3}
               />
             ) : (
               <p 
-                className={`italic opacity-90 px-4 ${readOnly ? 'cursor-default' : 'cursor-text'} ${!formData.description ? 'opacity-50' : ''}`}
+                className={`italic text-gray-600 px-4 ${readOnly ? 'cursor-default' : 'cursor-text'} ${!formData.description ? 'opacity-50' : ''}`}
                 onClick={readOnly ? undefined : () => setIsEditingDescription(true)}
               >
                 {formData.description || "Description de l'activité"}
@@ -284,12 +282,12 @@ export default function ActivityModal({
                     <button
                       key={color}
                       onClick={() => handleColorChange(color)}
-                      className={`w-8 h-8 rounded transition-all ${
+                      className={`w-8 h-8 rounded-full transition-all ${
                         isSelected ? 'ring-2 ring-offset-2 scale-110' : 'hover:scale-105'
                       }`}
                       style={{
                         backgroundColor: colorHex,
-                        '--tw-ring-color': textColor,
+                        '--tw-ring-color': '#000000',
                         '--tw-ring-offset-color': backgroundColor,
                       } as React.CSSProperties}
                       aria-label={`Sélectionner la couleur ${color}`}
@@ -310,12 +308,11 @@ export default function ActivityModal({
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 cursor-pointer transition-transform hover:scale-110"
+                  className="h-5 w-5 cursor-pointer transition-transform hover:scale-110 text-red-600"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                   strokeWidth={2}
-                  style={{ color: textColor === '#FFFFFF' ? '#FEE2E2' : '#DC2626' }}
                 >
                   <path
                     className='cursor-pointer'
@@ -328,20 +325,18 @@ export default function ActivityModal({
             )}
             <button
               onClick={onClose}
-              className="p-2 cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 cursor-pointer [&_*]:cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
               aria-label="Fermer"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
+                className="h-5 w-5 text-black"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
                 strokeWidth={2}
-                style={{ color: textColor }}
               >
                 <path
-                  className='cursor-pointer'
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   d="M6 18L18 6M6 6l12 12"
@@ -359,7 +354,6 @@ export default function ActivityModal({
               activities={activities}
               currentActivityId={formData.id}
               backgroundColor={backgroundColor}
-              textColor={textColor}
               onUpdate={handleRecurringActivitiesUpdate}
               onActivityClick={onActivityClick}
               onSave={handleRecurringActivitiesSave}
@@ -368,7 +362,7 @@ export default function ActivityModal({
             />
           ) : (
             <div className="px-4 py-2">
-              <h3 className="font-semibold mb-2" style={{ color: textColor }}>Activités récurrentes</h3>
+              <h3 className="font-semibold mb-2 text-black">Activités récurrentes</h3>
               {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
                 <div className="space-y-2">
                   {formData.recurringActivities.map((recurring, index) => {
@@ -381,27 +375,18 @@ export default function ActivityModal({
                               onActivityClick(linkedActivity.id)
                             }
                           }}
-                          className="underline cursor-pointer transition-colors text-left"
-                          style={{ 
-                            color: textColor === '#FFFFFF' ? '#93C5FD' : '#2563EB',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.color = textColor === '#FFFFFF' ? '#DBEAFE' : '#1D4ED8'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.color = textColor === '#FFFFFF' ? '#93C5FD' : '#2563EB'
-                          }}
+                          className="underline cursor-pointer transition-colors text-left text-blue-600 hover:text-blue-800"
                           disabled={!onActivityClick || !linkedActivity}
                         >
                           {linkedActivity?.title || `Activité ${recurring.targetedActivityId}`}
                         </button>
-                        <span style={{ color: textColor }}>: {recurring.percent}%</span>
+                        <span className="text-black">: {recurring.percent}%</span>
                       </div>
                     )
                   })}
                 </div>
               ) : (
-                <p className="opacity-50" style={{ color: textColor }}>Aucune activité récurrente</p>
+                <p className="opacity-50 text-black">Aucune activité récurrente</p>
               )}
             </div>
           )}
@@ -409,8 +394,8 @@ export default function ActivityModal({
 
         {/* Section Fréquence de répétition - uniquement si on édite une scheduledActivity */}
         {scheduledActivity && !readOnly && (
-          <div className="border-t p-4" style={{ borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }}>
-            <h3 className="font-semibold mb-3" style={{ color: textColor }}>Fréquence de répétition</h3>
+          <div className="border-t border-black p-4">
+            <h3 className="font-semibold mb-3 text-black">Fréquence de répétition</h3>
             <div className="flex gap-2 items-center flex-wrap">
               <input
                 type="number"
@@ -420,12 +405,9 @@ export default function ActivityModal({
                   const value = parseInt(e.target.value) || 1
                   handlePeriodicityChange('frequency', value)
                 }}
-                className="px-3 py-2 border rounded outline-none focus:ring-2"
+                className="px-3 py-2 border border-black rounded outline-none focus:ring-2 text-black bg-transparent"
                 style={{
-                  color: textColor,
-                  backgroundColor: 'transparent',
-                  borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
-                  '--tw-ring-color': textColor,
+                  '--tw-ring-color': '#000000',
                 } as React.CSSProperties}
                 placeholder="Fréquence"
               />
@@ -435,12 +417,10 @@ export default function ActivityModal({
                   const value = e.target.value as 'daily' | 'weekly' | 'monthly'
                   handlePeriodicityChange('unit', value)
                 }}
-                className="px-3 py-2 border rounded outline-none focus:ring-2"
+                className="px-3 py-2 border border-black rounded outline-none focus:ring-2 text-black"
                 style={{
-                  color: textColor,
                   backgroundColor: backgroundColor,
-                  borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
-                  '--tw-ring-color': textColor,
+                  '--tw-ring-color': '#000000',
                 } as React.CSSProperties}
               >
                 <option value="daily">Quotidien</option>
@@ -454,12 +434,10 @@ export default function ActivityModal({
                     const value = parseInt(e.target.value)
                     handlePeriodicityChange('weekOfMonth', value)
                   }}
-                  className="px-3 py-2 border rounded outline-none focus:ring-2"
+                  className="px-3 py-2 border border-black rounded outline-none focus:ring-2 text-black"
                   style={{
-                    color: textColor,
                     backgroundColor: backgroundColor,
-                    borderColor: textColor === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
-                    '--tw-ring-color': textColor,
+                    '--tw-ring-color': '#000000',
                   } as React.CSSProperties}
                 >
                   <option value="1">1ère semaine</option>

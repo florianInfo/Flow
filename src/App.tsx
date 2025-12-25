@@ -673,7 +673,7 @@ function App() {
           <nav className="flex gap-2 items-center">
             <button
               onClick={() => setViewMode('activities')}
-              className={`px-4 py-2 rounded transition-colors ${
+              className={`px-4 py-2 rounded-full transition-colors ${
                 viewMode === 'activities'
                   ? 'bg-gray-700 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -683,7 +683,7 @@ function App() {
             </button>
             <button
               onClick={() => setViewMode('planner')}
-              className={`px-4 py-2 rounded transition-colors ${
+              className={`px-4 py-2 rounded-full transition-colors ${
                 viewMode === 'planner'
                   ? 'bg-gray-700 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -693,7 +693,7 @@ function App() {
             </button>
             <button
               onClick={() => setViewMode('admin')}
-              className={`px-4 py-2 rounded transition-colors ${
+              className={`px-4 py-2 rounded-full transition-colors ${
                 viewMode === 'admin'
                   ? 'bg-gray-700 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -727,7 +727,7 @@ function App() {
           
           <button
             onClick={handleCreateActivity}
-            className="fixed bottom-8 right-8 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors cursor-pointer"
+            className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-lg hover:bg-gray-800 transition-colors cursor-pointer"
           >
             + Créer une activité
           </button>
@@ -747,7 +747,7 @@ function App() {
           <div className="border-b bg-gray-50">
             <button
               onClick={() => setIsActivitiesPanelOpen(!isActivitiesPanelOpen)}
-              className="w-full px-4 py-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
+              className="w-full px-4 py-2 flex items-center justify-between hover:bg-gray-100 transition-colors rounded-full"
             >
               <span className="font-medium">Activités disponibles</span>
               <span className="text-gray-500">

@@ -73,14 +73,14 @@ export default function Admin({
               {hasChanges && (
                 <button
                   onClick={handleSave}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
                 >
                   Enregistrer les modifications
                 </button>
               )}
               <button
                 onClick={handleReset}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-colors"
               >
                 Réinitialiser
               </button>
@@ -248,7 +248,7 @@ export default function Admin({
                     </p>
                     <button
                       onClick={onSaveUser}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors font-medium"
                     >
                       Sauvegarder le User sur le Bureau
                     </button>
@@ -300,7 +300,7 @@ export default function Admin({
                             {onDeleteSave && (
                               <button
                                 onClick={(e) => onDeleteSave(savedUser.filename, e)}
-                                className="ml-2 px-2 py-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                className="ml-2 px-2 py-1 text-red-600 hover:bg-red-50 rounded-full transition-colors"
                                 title="Supprimer de la liste"
                               >
                                 ×
@@ -330,7 +330,7 @@ export default function Admin({
                 </p>
                 <button
                   onClick={onResetUser}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors font-medium"
+                  className="px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors font-medium"
                 >
                   Réinitialiser le User
                 </button>

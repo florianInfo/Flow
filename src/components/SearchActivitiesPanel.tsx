@@ -1,5 +1,5 @@
 import { Activity } from '../models/Activity'
-import { getColorHex, getTextColor } from '../utils/ColorUtils'
+import { getColorHex } from '../utils/ColorUtils'
 
 interface SearchActivitiesPanelProps {
   activities: Activity[]
@@ -32,15 +32,14 @@ export default function SearchActivitiesPanel({
               }
             }}
             disabled={disabled}
-            className={`px-3 py-1 rounded transition-all hover:opacity-80 ${
+            className={`px-3 py-1 rounded-full transition-all hover:opacity-80 ${
               disabled ? 'cursor-not-allowed opacity-50' : onActivityClick ? 'cursor-pointer' : 'cursor-move'
             }`}
             style={{
               backgroundColor: getColorHex(activity.color),
-              color: getTextColor(getColorHex(activity.color)),
             } as React.CSSProperties}
           >
-            {activity.title}
+            <span className="text-black">{activity.title}</span>
           </button>
         ))}
       </div>
