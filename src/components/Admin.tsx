@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { AppSettings } from '../models/AppSettings'
-import { useAppSettings } from '../hooks/useAppSettings'
+import { useAppSettings } from '../contexts/AppSettingsContext'
 import { User } from '../models/Planning'
+import { getBorderRadiusOptions } from '../utils/BorderRadiusUtils'
 
 interface SavedUser {
   filename: string
@@ -48,10 +49,21 @@ export default function Admin({
     setHasChanges(true)
   }
 
+  const handleDesignSettingChange = (key: keyof AppSettings['design'], value: string) => {
+    const newSettings = {
+      ...localSettings,
+      design: {
+        ...localSettings.design,
+        [key]: value,
+      },
+    }
+    setLocalSettings(newSettings)
+    setHasChanges(true)
+  }
+
   const handleSave = () => {
     updateSettings(localSettings)
     setHasChanges(false)
-    alert('Paramètres sauvegardés avec succès !')
   }
 
   const handleReset = () => {
@@ -86,6 +98,38 @@ export default function Admin({
               </button>
             </div>
           </div>
+
+          {/* Section Design */}
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-700 mb-4 pb-2 border-b">
+              Paramètres de Design
+            </h2>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Border Radius */}
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-2">
+                    Border Radius
+                  </label>
+                  <select
+                    value={localSettings.design.borderRadius}
+                    onChange={(e) => handleDesignSettingChange('borderRadius', e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {getBorderRadiusOptions().map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Classe Tailwind: <code className="bg-gray-100 px-1 rounded">{localSettings.design.borderRadius}</code> • Valeur actuelle: <strong>{getBorderRadiusOptions().find(o => o.value === localSettings.design.borderRadius)?.pixels}px</strong>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
 
           {/* Section Planner */}
           <section className="mb-8">

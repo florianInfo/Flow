@@ -8,6 +8,7 @@ interface ActivityBadgeProps {
   onDragStart?: (e: React.DragEvent) => void
   onDragEnd?: () => void
   onClick?: () => void
+  borderRadiusClass?: string
 }
 
 export default function ActivityBadge({ 
@@ -17,6 +18,7 @@ export default function ActivityBadge({
   onDragStart,
   onDragEnd,
   onClick,
+  borderRadiusClass = 'rounded-xl',
 }: ActivityBadgeProps) {
   const backgroundColor = getColorHex(activity.color)
   const textColor = activity.textColor || 'black'
@@ -28,7 +30,7 @@ export default function ActivityBadge({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-sm transition-all duration-300 ease-in-out border-2 border-black ${
+      className={`inline-flex items-center gap-2 px-3 py-1.5 ${borderRadiusClass} shadow-sm transition-all duration-300 ease-in-out border-2 border-black ${
         draggable || onClick ? 'cursor-pointer' : 'cursor-default'
       }`}
       style={{
@@ -43,7 +45,7 @@ export default function ActivityBadge({
             e.stopPropagation()
             onDelete(activity.id)
           }}
-          className={`ml-1 cursor-pointer hover:opacity-70 hover:scale-125 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-xl ${textColor === 'white' ? 'text-white' : 'text-black'}`}
+          className={`ml-1 cursor-pointer hover:opacity-70 hover:scale-125 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${borderRadiusClass} ${textColor === 'white' ? 'text-white' : 'text-black'}`}
           aria-label="Supprimer l'activité"
         >
           <svg

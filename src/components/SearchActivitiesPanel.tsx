@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Activity } from '../models/Activity'
 import { ActivitySearch, type SearchRule } from '../utils/ActivitySearch'
 import ActivityBadge from './ActivityBadge'
+import { useAppSettings } from '../contexts/AppSettingsContext'
+import { getBorderRadiusFromSettings } from '../utils/BorderRadiusUtils'
 
 interface SearchActivitiesPanelProps {
   activities: Activity[]
@@ -23,6 +25,8 @@ export default function SearchActivitiesPanel({
   disabled = false,
   maxHeight,
 }: SearchActivitiesPanelProps) {
+  const { settings } = useAppSettings()
+  const borderRadiusClass = getBorderRadiusFromSettings(settings)
   const [searchTerm, setSearchTerm] = useState('')
   const [showTasks, setShowTasks] = useState(true) // Par défaut, afficher les tasks (activités avec recurringActivities)
 
@@ -89,6 +93,7 @@ export default function SearchActivitiesPanel({
               activity={activity}
               onDelete={onDelete}
               draggable={!disabled && !!onDragStart}
+              borderRadiusClass={borderRadiusClass}
               onDragStart={(e) => {
                 if (!disabled && onDragStart) {
                   e.dataTransfer.effectAllowed = 'move'

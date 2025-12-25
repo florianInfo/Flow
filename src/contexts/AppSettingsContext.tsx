@@ -1,9 +1,18 @@
-import { useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { AppSettings, DEFAULT_APP_SETTINGS } from '../models/AppSettings'
 
 const SETTINGS_STORAGE_KEY = 'app_settings'
 
-export function useAppSettings() {
+interface AppSettingsContextType {
+  settings: AppSettings
+  updateSettings: (newSettings: Partial<AppSettings>) => void
+  resetSettings: () => void
+  loading: boolean
+}
+
+const AppSettingsContext = createContext<AppSettingsContextType | undefined>(undefined)
+
+export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS)
   const [loading, setLoading] = useState(true)
 
@@ -13,13 +22,16 @@ export function useAppSettings() {
     if (storedSettings) {
       try {
         const parsed = JSON.parse(storedSettings) as AppSettings
-        // Fusionner avec les valeurs par défaut pour s'assurer que toutes les propriétés existent
         setSettings({
           ...DEFAULT_APP_SETTINGS,
           ...parsed,
           planner: {
             ...DEFAULT_APP_SETTINGS.planner,
             ...parsed.planner,
+          },
+          design: {
+            ...DEFAULT_APP_SETTINGS.design,
+            ...parsed.design,
           },
         })
       } catch (error) {
@@ -38,25 +50,36 @@ export function useAppSettings() {
   }, [settings, loading])
 
   const updateSettings = (newSettings: Partial<AppSettings>) => {
-    setSettings(prev => ({
-      ...prev,
-      ...newSettings,
-      planner: {
-        ...prev.planner,
-        ...newSettings.planner,
-      },
-    }))
+    setSettings(prev => {
+      const updated: AppSettings = {
+        planner: {
+          ...prev.planner,
+          ...(newSettings.planner || {}),
+        },
+        design: {
+          ...prev.design,
+          ...(newSettings.design || {}),
+        },
+      }
+      return updated
+    })
   }
 
   const resetSettings = () => {
     setSettings(DEFAULT_APP_SETTINGS)
   }
 
-  return {
-    settings,
-    updateSettings,
-    resetSettings,
-    loading,
-  }
+  return (
+    <AppSettingsContext.Provider value={{ settings, updateSettings, resetSettings, loading }}>
+      {children}
+    </AppSettingsContext.Provider>
+  )
 }
 
+export function useAppSettings() {
+  const context = useContext(AppSettingsContext)
+  if (context === undefined) {
+    throw new Error('useAppSettings must be used within an AppSettingsProvider')
+  }
+  return context
+}

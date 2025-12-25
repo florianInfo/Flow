@@ -16,6 +16,8 @@ import {
   deleteSavedUser,
   type SavedUser 
 } from './utils/UserSaveUtils'
+import { useAppSettings } from './contexts/AppSettingsContext'
+import { getBorderRadiusFromSettings } from './utils/BorderRadiusUtils'
 
 interface ActivitiesData {
   activities: Activity[]
@@ -24,6 +26,14 @@ interface ActivitiesData {
 type ViewMode = 'activities' | 'planner' | 'admin'
 
 function App() {
+  const { settings } = useAppSettings()
+  const [borderRadiusClass, setBorderRadiusClass] = useState<string>('rounded-xl')
+  
+  useEffect(() => {
+    const newBorderRadius = getBorderRadiusFromSettings(settings)
+    setBorderRadiusClass(newBorderRadius)
+  }, [settings.design?.borderRadius])
+  
   const [viewMode, setViewMode] = useState<ViewMode>('activities')
   const [user, setUser] = useState<User>({
     id: 1,
@@ -689,7 +699,7 @@ function App() {
           <nav className="flex gap-2 items-center">
             <button
               onClick={() => setViewMode('activities')}
-              className={`px-4 py-2 rounded-xl transition-colors border-2 ${
+              className={`px-4 py-2 ${borderRadiusClass} transition-colors border-2 ${
                 viewMode === 'activities'
                   ? 'bg-black text-white border-black'
                   : 'bg-white text-black border-black hover:bg-gray-100'
@@ -699,7 +709,7 @@ function App() {
             </button>
             <button
               onClick={() => setViewMode('planner')}
-              className={`px-4 py-2 rounded-xl transition-colors border-2 ${
+              className={`px-4 py-2 ${borderRadiusClass} transition-colors border-2 ${
                 viewMode === 'planner'
                   ? 'bg-black text-white border-black'
                   : 'bg-white text-black border-black hover:bg-gray-100'
@@ -709,7 +719,7 @@ function App() {
             </button>
             <button
               onClick={() => setViewMode('admin')}
-              className={`px-4 py-2 rounded-xl transition-colors border-2 ${
+              className={`px-4 py-2 ${borderRadiusClass} transition-colors border-2 ${
                 viewMode === 'admin'
                   ? 'bg-black text-white border-black'
                   : 'bg-white text-black border-black hover:bg-gray-100'
@@ -725,7 +735,7 @@ function App() {
         <main className="flex flex-col min-h-[calc(100vh-200px)] select-none flex-1">
           {/* Panel de recherche d'activités */}
           <div className="m-4">
-            <div className="rounded-xl border-2 border-black bg-white shadow-lg overflow-hidden">
+            <div className={`${borderRadiusClass} border-2 border-black bg-white shadow-lg overflow-hidden`}>
               <SearchActivitiesPanel
                 activities={user.activities}
                 onDragStart={(e, activity) => {
@@ -746,7 +756,7 @@ function App() {
           
           <button
             onClick={handleCreateActivity}
-            className="fixed top-[75%] left-1/2 transform -translate-x-1/2 bg-white text-black border-2 border-black px-6 py-3 rounded-xl shadow-lg hover:bg-black hover:text-white transition-colors cursor-pointer"
+            className={`fixed top-[75%] left-1/2 transform -translate-x-1/2 bg-white text-black border-2 border-black px-6 py-3 ${borderRadiusClass} shadow-lg hover:bg-black hover:text-white transition-colors cursor-pointer`}
           >
             + Créer une activité
           </button>
@@ -763,7 +773,7 @@ function App() {
       ) : (
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           <div className="flex-shrink-0 m-4">
-            <div className="h-full rounded-xl border-2 border-black bg-white shadow-lg overflow-hidden flex flex-col">
+            <div className={`h-full ${borderRadiusClass} border-2 border-black bg-white shadow-lg overflow-hidden flex flex-col`}>
               <SearchActivitiesPanel
                 activities={user.activities}
                 onDragStart={(e, activity) => {
@@ -783,7 +793,7 @@ function App() {
           
           {/* Planner - 60% de l'espace */}
           <div className="flex-1 min-h-0 overflow-hidden m-4">
-            <div className="h-full rounded-xl border-2 border-black bg-white shadow-lg overflow-hidden">
+            <div className={`h-full ${borderRadiusClass} border-2 border-black bg-white shadow-lg overflow-hidden`}>
               <Planner
                 activities={user.activities}
                 scheduledActivities={user.templates.flatMap(t => t.scheduledActivities)}

@@ -25,6 +25,7 @@ export interface ActivityBlockProps {
   onResizeStart?: (e: React.MouseEvent, edge: 'top' | 'bottom') => void
   onDelete?: () => void
   style?: React.CSSProperties
+  borderRadiusClass?: string
 }
 
 export default function ActivityBlock({
@@ -44,6 +45,7 @@ export default function ActivityBlock({
   onResizeStart,
   onDelete,
   style: additionalStyle,
+  borderRadiusClass = 'rounded-xl',
 }: ActivityBlockProps) {
   const isScheduled = !!scheduled
   const displayActivity = planned || scheduled
@@ -58,7 +60,6 @@ export default function ActivityBlock({
     left: `${position.left}%`,
     width: `${position.width}%`,
     backgroundColor,
-    borderRadius: '4px',
     padding: '4px 8px',
     fontSize: '12px',
     opacity: isScheduled ? 0.80 : 1,
@@ -85,7 +86,7 @@ export default function ActivityBlock({
       onDragOver={onDragOver}
       onDrop={onDrop}
       style={baseStyle}
-      className="flex flex-col justify-center relative"
+      className={`flex flex-col justify-center relative ${borderRadiusClass}`}
       title={title}
       onClick={onSelect}
       onDoubleClick={onDoubleClick}
@@ -108,7 +109,7 @@ export default function ActivityBlock({
       {/* Bouton de suppression - uniquement pour scheduled */}
       {isScheduled && isSelected && onDelete && scheduled?.id !== undefined && (
         <button
-          className="absolute top-1 right-1 z-30 rounded-xl w-3 h-3 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
+          className={`absolute top-1 right-1 z-30 ${borderRadiusClass} w-3 h-3 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity`}
           onClick={(e) => {
             e.stopPropagation()
             if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${activity.title}" de la routine ?`)) {

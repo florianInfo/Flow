@@ -1,7 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Activity } from '../models/Activity'
 import { ScheduledActivity, PlannedActivity } from '../models/Planning'
-import { useAppSettings } from '../hooks/useAppSettings'
+import { useAppSettings } from '../contexts/AppSettingsContext'
+import { getBorderRadiusFromSettings } from '../utils/BorderRadiusUtils'
 import { timeToMinutes, minutesToTime, adjustTimeBounds } from '../utils/TimeUtils'
 import { getWeekStart, generateWeekDays, generateRoutineWeekDays } from '../utils/DateUtils'
 import { getSlotFromMousePosition, PlannerDimensions, detectScrollZone, validateDuration } from '../utils/PlannerPositionUtils'
@@ -47,6 +48,7 @@ export default function Planner({
   onModeChange,
 }: PlannerProps) {
   const { settings } = useAppSettings()
+  const borderRadiusClass = getBorderRadiusFromSettings(settings)
   
   // Gestion interne du mode
   const [mode, setMode] = useState<PlannerMode>('routine')
@@ -809,6 +811,7 @@ export default function Planner({
                       position={position}
                       isSelected={isSelected}
                       mode={mode}
+                      borderRadiusClass={borderRadiusClass}
                       onSelect={(e) => {
                         e.stopPropagation()
                         setSelectedPlannedActivity(planned)
@@ -844,6 +847,7 @@ export default function Planner({
                         isSelected={isSelected}
                         isResizing={isCurrentlyResizing || undefined}
                         mode={mode}
+                        borderRadiusClass={borderRadiusClass}
                         onSelect={(e) => {
                           e.stopPropagation()
                           setSelectedScheduledActivity(scheduled)

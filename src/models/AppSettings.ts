@@ -7,11 +7,15 @@ export interface PlannerSettings {
   scrollThreshold: number // Distance en pixels du bord pour déclencher le scroll automatique (par défaut 50)
 }
 
+export interface DesignSettings {
+  borderRadius: string // Classe Tailwind pour le border-radius (par défaut 'rounded-xl')
+}
+
 export interface AppSettings {
   planner: PlannerSettings
+  design: DesignSettings
   // Ajouter d'autres sections de paramètres ici à l'avenir
   // exemple: activities: ActivitySettings
-  // exemple: ui: UISettings
 }
 
 export const DEFAULT_PLANNER_SETTINGS: PlannerSettings = {
@@ -23,7 +27,12 @@ export const DEFAULT_PLANNER_SETTINGS: PlannerSettings = {
   scrollThreshold: 50,
 }
 
+export const DEFAULT_DESIGN_SETTINGS: DesignSettings = {
+  borderRadius: 'rounded-xl',
+}
+
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   planner: DEFAULT_PLANNER_SETTINGS,
+  design: DEFAULT_DESIGN_SETTINGS,
 }
 
