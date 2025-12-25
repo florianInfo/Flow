@@ -724,20 +724,25 @@ function App() {
       {viewMode === 'activities' ? (
         <main className="flex flex-col min-h-[calc(100vh-200px)] select-none flex-1">
           {/* Panel de recherche d'activités */}
-          <SearchActivitiesPanel
-            activities={user.activities}
-            onDragStart={(e, activity) => {
-              e.dataTransfer.effectAllowed = 'move'
-              e.dataTransfer.setData('activity', JSON.stringify(activity))
-              setDraggedActivity(activity)
-            }}
-            onDragEnd={() => {
-              setDraggedActivity(null)
-            }}
-            onActivityClick={handleActivityClick}
-            onDelete={handleDelete} // Autoriser la suppression depuis la vue activities
-            showDragHint={false}
-          />
+          <div className="m-4">
+            <div className="rounded-xl border-2 border-black bg-white shadow-lg overflow-hidden">
+              <SearchActivitiesPanel
+                activities={user.activities}
+                onDragStart={(e, activity) => {
+                  e.dataTransfer.effectAllowed = 'move'
+                  e.dataTransfer.setData('activity', JSON.stringify(activity))
+                  setDraggedActivity(activity)
+                }}
+                onDragEnd={() => {
+                  setDraggedActivity(null)
+                }}
+                onActivityClick={handleActivityClick}
+                onDelete={handleDelete} // Autoriser la suppression depuis la vue activities
+                showDragHint={false}
+                maxHeight="80vh"
+              />
+            </div>
+          </div>
           
           <button
             onClick={handleCreateActivity}
@@ -757,65 +762,66 @@ function App() {
         />
       ) : (
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          {/* SearchActivitiesPanel - 30% de l'espace */}
-          <div className="flex-shrink-0 overflow-y-auto" style={{ flex: '0 0 30%' }}>
-            <SearchActivitiesPanel
-              activities={user.activities.filter(activity => 
-                activity.recurringActivities && activity.recurringActivities.length > 0
-              )}
-              onDragStart={(e, activity) => {
-                e.dataTransfer.effectAllowed = 'move'
-                e.dataTransfer.setData('activity', JSON.stringify(activity))
-                setDraggedActivity(activity)
-              }}
-              onDragEnd={() => {
-                setDraggedActivity(null)
-              }}
-              onActivityClick={handleActivityClick}
-              disabled={plannerMode === 'calendrier'}
-            />
+          <div className="flex-shrink-0 m-4">
+            <div className="h-full rounded-xl border-2 border-black bg-white shadow-lg overflow-hidden flex flex-col">
+              <SearchActivitiesPanel
+                activities={user.activities}
+                onDragStart={(e, activity) => {
+                  e.dataTransfer.effectAllowed = 'move'
+                  e.dataTransfer.setData('activity', JSON.stringify(activity))
+                  setDraggedActivity(activity)
+                }}
+                onDragEnd={() => {
+                  setDraggedActivity(null)
+                }}
+                onActivityClick={handleActivityClick}
+                disabled={plannerMode === 'calendrier'}
+                maxHeight="100%"
+              />
+            </div>
           </div>
-          
-          {/* Espace entre les deux - 10% */}
-          <div className="flex-shrink-0" style={{ flex: '0 0 10%' }}></div>
           
           {/* Planner - 60% de l'espace */}
-          <div className="flex-1 min-h-0 overflow-hidden" style={{ flex: '0 0 60%' }}>
-            <Planner
-              activities={user.activities}
-              scheduledActivities={user.templates.flatMap(t => t.scheduledActivities)}
-              plannedActivities={user.calendars.find(c => c.id === currentCalendarId)?.plannedActivities || []}
-              onScheduledActivityCreate={handleScheduledActivityCreate}
-              onScheduledActivityUpdate={handleScheduledActivityUpdate}
-              onScheduledActivityDelete={handleScheduledActivityDelete}
-              onPlannedActivityUpdate={handlePlannedActivityUpdate}
-              currentWeek={currentWeek}
-              onWeekChange={handleWeekChange}
-              draggedActivity={draggedActivity}
-              onDragEnd={() => setDraggedActivity(null)}
-              onModeChange={(mode) => setPlannerMode(mode)}
-              onActivityDoubleClick={(activityId, scheduledActivityId, mode) => {
-                const activity = user.activities.find(a => a.id === activityId)
-                if (activity) {
-                  setSelectedActivity(activity)
-                  // Si on a un scheduledActivityId, trouver la scheduledActivity correspondante
-                  if (scheduledActivityId) {
-                    const scheduled = user.templates
-                      .flatMap(t => t.scheduledActivities)
-                      .find(s => s.id === scheduledActivityId)
-                    setSelectedScheduledActivity(scheduled || null)
-                  } else {
-                    setSelectedScheduledActivity(null)
+          <div className="flex-1 min-h-0 overflow-hidden m-4">
+            <div className="h-full rounded-xl border-2 border-black bg-white shadow-lg overflow-hidden">
+              <Planner
+                activities={user.activities}
+                scheduledActivities={user.templates.flatMap(t => t.scheduledActivities)}
+                plannedActivities={user.calendars.find(c => c.id === currentCalendarId)?.plannedActivities || []}
+                onScheduledActivityCreate={handleScheduledActivityCreate}
+                onScheduledActivityUpdate={handleScheduledActivityUpdate}
+                onScheduledActivityDelete={handleScheduledActivityDelete}
+                onPlannedActivityUpdate={handlePlannedActivityUpdate}
+                currentWeek={currentWeek}
+                onWeekChange={handleWeekChange}
+                draggedActivity={draggedActivity}
+                onDragEnd={() => setDraggedActivity(null)}
+                onModeChange={(mode) => setPlannerMode(mode)}
+                onActivityDoubleClick={(activityId, scheduledActivityId, mode) => {
+                  const activity = user.activities.find(a => a.id === activityId)
+                  if (activity) {
+                    setSelectedActivity(activity)
+                    // Si on a un scheduledActivityId, trouver la scheduledActivity correspondante
+                    if (scheduledActivityId) {
+                      const scheduled = user.templates
+                        .flatMap(t => t.scheduledActivities)
+                        .find(s => s.id === scheduledActivityId)
+                      setSelectedScheduledActivity(scheduled || null)
+                    } else {
+                      setSelectedScheduledActivity(null)
+                    }
+                    // Stocker le mode du planner pour déterminer si la modal doit être en readOnly
+                    if (mode) {
+                      setPlannerMode(mode)
+                    }
+                    setIsModalOpen(true)
                   }
-                  // Stocker le mode du planner pour déterminer si la modal doit être en readOnly
-                  if (mode) {
-                    setPlannerMode(mode)
-                  }
-                  setIsModalOpen(true)
-                }
-              }}
-            />
+                }}
+              />
+            </div>
           </div>
+          {/* Espace entre les deux - 5% */}
+          <div className="flex-shrink-0" style={{ flex: '0 0 2.5%' }}></div>
         </div>
       )}
 

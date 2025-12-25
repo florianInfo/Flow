@@ -11,6 +11,7 @@ interface SearchActivitiesPanelProps {
   onDelete?: (id: number | undefined) => void // Handler pour supprimer une activité
   disabled?: boolean
   showDragHint?: boolean // Afficher le texte "Glissez une activité vers le planner"
+  maxHeight?: string // Hauteur maximale pour contrôler la taille et le scroll
 }
 
 export default function SearchActivitiesPanel({
@@ -20,7 +21,7 @@ export default function SearchActivitiesPanel({
   onActivityClick,
   onDelete,
   disabled = false,
-  showDragHint = true,
+  maxHeight,
 }: SearchActivitiesPanelProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [showTasks, setShowTasks] = useState(true) // Par défaut, afficher les tasks (activités avec recurringActivities)
@@ -29,7 +30,7 @@ export default function SearchActivitiesPanel({
   const defaultSearchRules: SearchRule[] = ActivitySearch.getDefaultSearchRules()
 
   // Filtrer les activités selon le filtre "afficher les task"
-  const taskFilteredActivities = showTasks
+  const taskFilteredActivities = !showTasks
     ? activities.filter(activity => activity.recurringActivities && activity.recurringActivities.length > 0)
     : activities
 
@@ -39,9 +40,9 @@ export default function SearchActivitiesPanel({
     : taskFilteredActivities
 
   return (
-    <div className="p-4 m-4 rounded-xl border-2 border-black bg-white shadow-lg flex-shrink-0">
+    <div className="p-4 flex-shrink-0 flex flex-col" style={{ maxHeight: maxHeight || 'none' }}>
       {/* Barre de recherche et switch */}
-      <div className="flex items-center gap-4 mb-3">
+      <div className="flex items-center gap-4 mb-3 flex-shrink-0">
         <input
           type="text"
           placeholder="Rechercher une activité..."
@@ -72,10 +73,15 @@ export default function SearchActivitiesPanel({
       </div>
 
       {/* Liste des activités */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {showDragHint && (
-          <span className="font-medium text-gray-700">Glissez une activité vers le planner :</span>
-        )}
+      <div 
+        className="flex items-center gap-2 flex-wrap overflow-y-auto" 
+        style={{ 
+          scrollBehavior: 'smooth', 
+          scrollbarWidth: 'thin',
+          maxHeight: maxHeight ? `calc(${maxHeight}` : 'none',
+          overflowY: maxHeight ? 'auto' : 'visible'
+        }}
+      >
         {filteredActivities.length > 0 ? (
           filteredActivities.map(activity => (
             <ActivityBadge
