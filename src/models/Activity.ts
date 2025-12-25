@@ -19,6 +19,7 @@ export interface Activity {
   id?: number;
   title: string;
   description: string;
-  color: Color;
+  color: Color | string; // Peut être un Color enum ou un hex string pour les couleurs personnalisées
+  textColor?: 'black' | 'white'; // Couleur du texte (noir ou blanc)
   recurringActivities: RecurringActivity[];
 }

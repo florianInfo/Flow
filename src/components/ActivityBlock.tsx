@@ -64,7 +64,11 @@ export default function ActivityBlock({
     opacity: isScheduled ? 0.7 : 1,
     borderWidth: isSelected ? '2px' : isScheduled ? '1px' : '0',
     borderStyle: isSelected ? 'solid' : isScheduled ? 'dashed' : 'none',
-    borderColor: isSelected ? '#000000' : isScheduled ? '#000000' : 'transparent',
+    borderColor: isSelected 
+      ? (activity.textColor === 'white' ? 'rgba(255,255,255,0.3)' : '#000000')
+      : isScheduled 
+        ? (activity.textColor === 'white' ? 'rgba(255,255,255,0.3)' : '#000000')
+        : 'transparent',
     zIndex: isSelected ? 15 : isScheduled ? 5 : 10,
     cursor: isScheduled ? (isResizing ? 'ns-resize' : 'move') : 'default',
     marginLeft: position.left > 0 ? '2px' : '0',
@@ -99,7 +103,7 @@ export default function ActivityBlock({
             top: '-3px',
             width: '40px',
             height: '6px',
-            backgroundColor: '#000000',
+            backgroundColor: activity.textColor === 'white' ? 'rgba(255,255,255,0.8)' : '#000000',
             borderRadius: '3px',
           }}
         />
@@ -127,8 +131,8 @@ export default function ActivityBlock({
       )}
 
       {/* Contenu de l'activité */}
-      <div className="font-medium truncate text-black">{activity.title}</div>
-      <div className="text-xs text-gray-600">
+      <div className={`font-medium truncate ${activity.textColor === 'white' ? 'text-white' : 'text-black'}`}>{activity.title}</div>
+      <div className={`text-xs ${activity.textColor === 'white' ? 'text-gray-300' : 'text-gray-600'}`}>
         {startTime} - {endTime}
       </div>
 
@@ -141,7 +145,7 @@ export default function ActivityBlock({
             bottom: '-3px',
             width: '40px',
             height: '6px',
-            backgroundColor: '#000000',
+            backgroundColor: activity.textColor === 'white' ? 'rgba(255,255,255,0.8)' : '#000000',
             borderRadius: '3px',
           }}
         />

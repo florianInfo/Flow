@@ -62,3 +62,14 @@
   }
 }
 
+/* Styles pour la sélection de texte avec couleur dynamique */
+::selection {
+  background-color: var(--selection-bg, rgba(0,0,0,0.2));
+  color: var(--selection-color, #FFFFFF);
+}
+
+::-moz-selection {
+  background-color: var(--selection-bg, rgba(0,0,0,0.2));
+  color: var(--selection-color, #FFFFFF);
+}
+

@@ -3,6 +3,7 @@ import { Activity, RecurringActivity, Color } from '../models/Activity'
 import { ScheduledActivity, Periodicity } from '../models/Planning'
 import { getColorHex } from '../utils/ColorUtils'
 import RecurringActivitiesSection from './RecurringActivitiesSection'
+import ColorPicker from './ColorPicker'
 
 interface ActivityModalProps {
   activity: Activity | null | undefined
@@ -40,6 +41,7 @@ export default function ActivityModal({
     title: activity?.title || '',
     description: activity?.description || '',
     color: activity?.color || Color.TEAL_MUTED,
+    textColor: activity?.textColor || 'black',
     recurringActivities: activity?.recurringActivities || [],
   })
 
@@ -51,6 +53,7 @@ export default function ActivityModal({
           title: activity.title,
           description: activity.description,
           color: activity.color,
+          textColor: activity.textColor || 'black',
           recurringActivities: activity.recurringActivities || [],
         })
       } else {
@@ -58,6 +61,7 @@ export default function ActivityModal({
           title: '',
           description: '',
           color: Color.TEAL_MUTED,
+          textColor: 'black',
           recurringActivities: [],
         })
       }
@@ -154,9 +158,17 @@ export default function ActivityModal({
     onSave(updatedFormData)
   }
 
-  const handleColorChange = (newColor: Color) => {
+  const handleColorChange = (newColor: Color | string) => {
     if (readOnly) return
     const updatedFormData = { ...formData, color: newColor }
+    setFormData(updatedFormData)
+    // Sauvegarder automatiquement
+    onSave(updatedFormData)
+  }
+
+  const handleTextColorChange = (newTextColor: 'black' | 'white') => {
+    if (readOnly) return
+    const updatedFormData = { ...formData, textColor: newTextColor }
     setFormData(updatedFormData)
     // Sauvegarder automatiquement
     onSave(updatedFormData)
@@ -199,15 +211,36 @@ export default function ActivityModal({
   }
 
   const backgroundColor = getColorHex(formData.color)
+  const textColor = formData.textColor || 'black'
+  const borderColor = textColor === 'white' ? 'rgba(255,255,255,0.3)' : '#000000'
+  const selectionBg = textColor === 'white' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'
+  const selectionColor = textColor === 'white' ? '#000000' : '#FFFFFF'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div 
+        id={`activity-modal-${formData.id || 'new'}`}
         className="shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded-3xl p-4"
-        style={{ backgroundColor }}
+        style={{ 
+          backgroundColor, 
+          color: textColor === 'white' ? '#FFFFFF' : '#000000',
+        }}
       >
+        <style>{`
+          #activity-modal-${formData.id || 'new'} ::selection {
+            background-color: ${selectionBg};
+            color: ${selectionColor};
+          }
+          #activity-modal-${formData.id || 'new'} ::-moz-selection {
+            background-color: ${selectionBg};
+            color: ${selectionColor};
+          }
+        `}</style>
         {/* Header */}
-        <div className="flex items-start justify-between mb-2 border-b border-black">
+        <div 
+          className="flex items-start justify-between mb-2 border-b"
+          style={{ borderColor: borderColor }}
+        >
           <div className="flex-1">
             {isEditingTitle ? (
               <input
@@ -227,15 +260,16 @@ export default function ActivityModal({
                   }
                 }}
                 placeholder="Titre de l'activité"
-                className="text-2xl cursor-text font-bold w-full border outline-none focus:ring-2 px-2 py-1 text-black"
+                className={`text-2xl cursor-text font-bold w-full border outline-none focus:ring-2 px-2 py-1 ${textColor === 'white' ? 'text-white' : 'text-black'}`}
                 style={{ 
-                  '--tw-ring-color': '#000000',
-                  backgroundColor: 'transparent'
+                  '--tw-ring-color': textColor === 'white' ? '#FFFFFF' : '#000000',
+                  backgroundColor: 'transparent',
+                  borderColor: borderColor
                 } as React.CSSProperties}
               />
             ) : (
               <h2 
-                className={`text-2xl font-bold px-4 pt-1 text-black ${readOnly ? 'cursor-default' : 'cursor-text'} ${!formData.title ? 'opacity-50' : ''}`}
+                className={`text-2xl font-bold px-4 pt-1 ${textColor === 'white' ? 'text-white' : 'text-black'} ${readOnly ? 'cursor-default' : 'cursor-text'} ${!formData.title ? 'opacity-50' : ''}`}
                 onClick={readOnly ? undefined : () => setIsEditingTitle(true)}
               >
                 {formData.title || "Titre de l'activité"}
@@ -256,16 +290,17 @@ export default function ActivityModal({
                   }
                 }}
                 placeholder="Description de l'activité"
-                className="italic p-2 cursor-text w-full border outline-none focus:ring-2 rounded resize-none text-gray-600"
+                className={`italic p-2 cursor-text w-full border outline-none focus:ring-2 rounded resize-none ${textColor === 'white' ? 'text-gray-300' : 'text-gray-600'}`}
                 style={{ 
                   backgroundColor: 'transparent',
-                  '--tw-ring-color': '#000000' 
+                  '--tw-ring-color': textColor === 'white' ? '#FFFFFF' : '#000000',
+                  borderColor: borderColor
                 } as React.CSSProperties}
                 rows={3}
               />
             ) : (
               <p 
-                className={`italic text-gray-600 px-4 ${readOnly ? 'cursor-default' : 'cursor-text'} ${!formData.description ? 'opacity-50' : ''}`}
+                className={`italic px-4 ${textColor === 'white' ? 'text-gray-300' : 'text-gray-600'} ${readOnly ? 'cursor-default' : 'cursor-text'} ${!formData.description ? 'opacity-50' : ''}`}
                 onClick={readOnly ? undefined : () => setIsEditingDescription(true)}
               >
                 {formData.description || "Description de l'activité"}
@@ -274,27 +309,14 @@ export default function ActivityModal({
             
             {/* Sélecteur de couleur - masqué en mode lecture seule */}
             {!readOnly && (
-              <div className="flex items-center gap-2 px-4 py-2 flex-wrap">
-                {Object.values(Color).map((color) => {
-                  const colorHex = getColorHex(color)
-                  const isSelected = formData.color === color
-                  return (
-                    <button
-                      key={color}
-                      onClick={() => handleColorChange(color)}
-                      className={`w-8 h-8 rounded-full transition-all ${
-                        isSelected ? 'ring-2 ring-offset-2 scale-110' : 'hover:scale-105'
-                      }`}
-                      style={{
-                        backgroundColor: colorHex,
-                        '--tw-ring-color': '#000000',
-                        '--tw-ring-offset-color': backgroundColor,
-                      } as React.CSSProperties}
-                      aria-label={`Sélectionner la couleur ${color}`}
-                      title={color}
-                    />
-                  )
-                })}
+              <div className="px-4 py-2">
+                <ColorPicker
+                  selectedColor={formData.color}
+                  onColorChange={handleColorChange}
+                  backgroundColor={backgroundColor}
+                  textColor={textColor}
+                  onTextColorChange={handleTextColorChange}
+                />
               </div>
             )}
           </div>
@@ -308,7 +330,7 @@ export default function ActivityModal({
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 cursor-pointer transition-transform hover:scale-110 text-red-600"
+                  className={`h-5 w-5 cursor-pointer transition-transform hover:scale-110 ${textColor === 'white' ? 'text-red-300' : 'text-red-600'}`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -330,7 +352,7 @@ export default function ActivityModal({
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-black"
+                className={`h-5 w-5 ${textColor === 'white' ? 'text-white' : 'text-black'}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -354,6 +376,7 @@ export default function ActivityModal({
               activities={activities}
               currentActivityId={formData.id}
               backgroundColor={backgroundColor}
+              textColor={textColor}
               onUpdate={handleRecurringActivitiesUpdate}
               onActivityClick={onActivityClick}
               onSave={handleRecurringActivitiesSave}
@@ -362,7 +385,7 @@ export default function ActivityModal({
             />
           ) : (
             <div className="px-4 py-2">
-              <h3 className="font-semibold mb-2 text-black">Activités récurrentes</h3>
+              <h3 className={`font-semibold mb-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Activités récurrentes</h3>
               {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
                 <div className="space-y-2">
                   {formData.recurringActivities.map((recurring, index) => {
@@ -375,18 +398,18 @@ export default function ActivityModal({
                               onActivityClick(linkedActivity.id)
                             }
                           }}
-                          className="underline cursor-pointer transition-colors text-left text-blue-600 hover:text-blue-800"
+                          className={`underline cursor-pointer transition-colors text-left ${textColor === 'white' ? 'text-blue-300 hover:text-blue-100' : 'text-blue-600 hover:text-blue-800'}`}
                           disabled={!onActivityClick || !linkedActivity}
                         >
                           {linkedActivity?.title || `Activité ${recurring.targetedActivityId}`}
                         </button>
-                        <span className="text-black">: {recurring.percent}%</span>
+                        <span className={textColor === 'white' ? 'text-white' : 'text-black'}>: {recurring.percent}%</span>
                       </div>
                     )
                   })}
                 </div>
               ) : (
-                <p className="opacity-50 text-black">Aucune activité récurrente</p>
+                <p className={`opacity-50 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Aucune activité récurrente</p>
               )}
             </div>
           )}
@@ -394,8 +417,8 @@ export default function ActivityModal({
 
         {/* Section Fréquence de répétition - uniquement si on édite une scheduledActivity */}
         {scheduledActivity && !readOnly && (
-          <div className="border-t border-black p-4">
-            <h3 className="font-semibold mb-3 text-black">Fréquence de répétition</h3>
+          <div className="border-t p-4" style={{ borderColor: borderColor }}>
+            <h3 className={`font-semibold mb-3 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Fréquence de répétition</h3>
             <div className="flex gap-2 items-center flex-wrap">
               <input
                 type="number"
@@ -405,9 +428,10 @@ export default function ActivityModal({
                   const value = parseInt(e.target.value) || 1
                   handlePeriodicityChange('frequency', value)
                 }}
-                className="px-3 py-2 border border-black rounded outline-none focus:ring-2 text-black bg-transparent"
+                className={`px-3 py-2 border rounded outline-none focus:ring-2 bg-transparent ${textColor === 'white' ? 'text-white' : 'text-black'}`}
                 style={{
-                  '--tw-ring-color': '#000000',
+                  '--tw-ring-color': textColor === 'white' ? '#FFFFFF' : '#000000',
+                  borderColor: borderColor
                 } as React.CSSProperties}
                 placeholder="Fréquence"
               />
@@ -417,10 +441,11 @@ export default function ActivityModal({
                   const value = e.target.value as 'daily' | 'weekly' | 'monthly'
                   handlePeriodicityChange('unit', value)
                 }}
-                className="px-3 py-2 border border-black rounded outline-none focus:ring-2 text-black"
+                className={`px-3 py-2 border rounded outline-none focus:ring-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}
                 style={{
                   backgroundColor: backgroundColor,
-                  '--tw-ring-color': '#000000',
+                  '--tw-ring-color': textColor === 'white' ? '#FFFFFF' : '#000000',
+                  borderColor: borderColor
                 } as React.CSSProperties}
               >
                 <option value="daily">Quotidien</option>
@@ -434,10 +459,11 @@ export default function ActivityModal({
                     const value = parseInt(e.target.value)
                     handlePeriodicityChange('weekOfMonth', value)
                   }}
-                  className="px-3 py-2 border border-black rounded outline-none focus:ring-2 text-black"
+                  className={`px-3 py-2 border rounded outline-none focus:ring-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}
                   style={{
                     backgroundColor: backgroundColor,
-                    '--tw-ring-color': '#000000',
+                    '--tw-ring-color': textColor === 'white' ? '#FFFFFF' : '#000000',
+                    borderColor: borderColor
                   } as React.CSSProperties}
                 >
                   <option value="1">1ère semaine</option>

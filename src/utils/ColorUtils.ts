@@ -83,9 +83,13 @@ export const ColorPalette: ColorPaletteType = {
 
 /**
  * Fonction utilitaire pour obtenir la valeur hexadécimale d'une couleur
+ * Accepte soit un Color enum soit un hex string
  */
-export function getColorHex(color: Color): string {
-  return ColorPalette[color].hex
+export function getColorHex(color: Color | string): string {
+  if (typeof color === 'string' && color.startsWith('#')) {
+    return color
+  }
+  return ColorPalette[color as Color].hex
 }
 
 /**

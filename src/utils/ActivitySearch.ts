@@ -3,8 +3,9 @@ import { Activity } from '../models/Activity'
 /**
  * Search rules configuration for activity search
  * Each rule is a function that takes an activity and a search term and returns true if the activity matches
+ * Can also be used as a filter without search term (activity only)
  */
-type SearchRule = (activity: Activity, searchTerm: string) => boolean
+export type SearchRule = (activity: Activity, searchTerm?: string) => boolean
 
 /**
  * Utility class for searching activities
@@ -15,10 +16,12 @@ export class ActivitySearch {
    * This can be easily modified or extended
    */
   private static defaultSearchRules: SearchRule[] = [
-    (activity: Activity, searchTerm: string) => {
+    (activity: Activity, searchTerm?: string) => {
+      if (!searchTerm) return true
       return activity.title.toLowerCase().includes(searchTerm.toLowerCase())
     },
-    (activity: Activity, searchTerm: string) => {
+    (activity: Activity, searchTerm?: string) => {
+      if (!searchTerm) return true
       return activity.description.toLowerCase().includes(searchTerm.toLowerCase())
     },
   ]
@@ -37,12 +40,13 @@ export class ActivitySearch {
     searchTerm: string,
     searchRules?: SearchRule[]
   ): Activity[] {
-    if (!searchTerm || searchTerm.trim() === '') {
-      return activities
-    }
-
     const normalizedSearchTerm = searchTerm.trim()
     const rules = searchRules || this.defaultSearchRules
+
+    // Si pas de terme de recherche, retourner toutes les activités
+    if (!normalizedSearchTerm) {
+      return activities
+    }
 
     return activities.filter((activity) => {
       // An activity matches if at least one rule returns true
@@ -71,7 +75,8 @@ export class ActivitySearch {
     fieldGetter: (activity: Activity) => string,
     caseSensitive: boolean = false
   ): SearchRule {
-    return (activity: Activity, searchTerm: string) => {
+    return (activity: Activity, searchTerm?: string) => {
+      if (!searchTerm) return true
       const fieldValue = fieldGetter(activity)
       const normalizedField = caseSensitive ? fieldValue : fieldValue.toLowerCase()
       const normalizedTerm = caseSensitive ? searchTerm : searchTerm.toLowerCase()

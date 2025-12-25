@@ -706,28 +706,47 @@ function App() {
       </header>
 
       {viewMode === 'activities' ? (
-        <main className="flex items-center justify-center min-h-[calc(100vh-200px)] px-4 py-8 select-none flex-1">
-          <div className="flex flex-wrap justify-center items-center gap-4 max-w-6xl select-none">
-            {user.activities
-              .filter(activity => activity.recurringActivities && activity.recurringActivities.length > 0)
-              .map((activity, index) => (
-              <div
-                key={activity.id || index}
-                style={getRandomTransform()}
-                className="cursor-pointer hover:scale-110 transition-transform duration-300"
-                onClick={() => handleActivityClick(activity)}
-              >
-                <ActivityBadge
-                  activity={activity}
-                  onDelete={handleDelete}
-                />
-              </div>
-            ))}
+        <main className="flex flex-col min-h-[calc(100vh-200px)] select-none flex-1">
+          {/* Panel de recherche d'activités */}
+          <SearchActivitiesPanel
+            activities={user.activities}
+            onDragStart={(e, activity) => {
+              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.setData('activity', JSON.stringify(activity))
+              setDraggedActivity(activity)
+            }}
+            onDragEnd={() => {
+              setDraggedActivity(null)
+            }}
+            onActivityClick={handleActivityClick}
+            onDelete={handleDelete} // Autoriser la suppression depuis la vue activities
+            showDragHint={false}
+          />
+          
+          {/* Grille des activités */}
+          <div className="flex-1 overflow-auto px-4 py-8">
+            <div className="flex flex-wrap justify-center items-center gap-4 max-w-6xl mx-auto select-none">
+              {user.activities
+                .filter(activity => activity.recurringActivities && activity.recurringActivities.length > 0)
+                .map((activity, index) => (
+                <div
+                  key={activity.id || index}
+                  style={getRandomTransform()}
+                  className="cursor-pointer hover:scale-110 transition-transform duration-300"
+                  onClick={() => handleActivityClick(activity)}
+                >
+                  <ActivityBadge
+                    activity={activity}
+                    onDelete={handleDelete}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
           
           <button
             onClick={handleCreateActivity}
-            className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-lg hover:bg-gray-800 transition-colors cursor-pointer"
+            className="fixed top-[75%] left-1/2 transform -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-lg hover:bg-gray-800 transition-colors cursor-pointer"
           >
             + Créer une activité
           </button>
