@@ -325,7 +325,7 @@ export default function ActivityModal({
             {!isCreateMode && !readOnly && (
               <button
                 onClick={handleDelete}
-                className="p-2 hover:bg-red-50 rounded-full transition-colors"
+                className="p-2 hover:bg-red-50 rounded-xl transition-colors"
                 aria-label="Supprimer"
               >
                 <svg
@@ -347,7 +347,7 @@ export default function ActivityModal({
             )}
             <button
               onClick={onClose}
-              className="p-2 cursor-pointer [&_*]:cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 cursor-pointer [&_*]:cursor-pointer hover:bg-gray-100 rounded-xl transition-colors"
               aria-label="Fermer"
             >
               <svg

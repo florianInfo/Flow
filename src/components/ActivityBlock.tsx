@@ -112,7 +112,7 @@ export default function ActivityBlock({
       {/* Bouton de suppression - uniquement pour scheduled */}
       {isScheduled && isSelected && onDelete && scheduled?.id !== undefined && (
         <button
-          className="absolute top-1 right-1 z-30 rounded-full w-3 h-3 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
+          className="absolute top-1 right-1 z-30 rounded-xl w-3 h-3 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
           onClick={(e) => {
             e.stopPropagation()
             if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${activity.title}" de la routine ?`)) {

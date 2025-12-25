@@ -335,7 +335,7 @@ export default function RecurringActivitiesSection({
         </button>
         <button
           onClick={handleCreateNewRecurring}
-          className="p-1 cursor-pointer [&_*]:cursor-pointer hover:bg-gray-100 rounded-full transition-colors mr-2"
+          className="p-1 cursor-pointer [&_*]:cursor-pointer hover:bg-gray-100 rounded-xl transition-colors mr-2"
           aria-label="Ajouter une activité récurrente"
         >
           <svg
@@ -394,7 +394,7 @@ export default function RecurringActivitiesSection({
                   <div className="flex items-center gap-1">
                     <button
                       onClick={handleValidateNewRecurring}
-                      className="p-1 cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
+                      className="p-1 cursor-pointer hover:bg-gray-100 rounded-xl transition-colors"
                       aria-label="Valider"
                     >
                       <svg
@@ -414,7 +414,7 @@ export default function RecurringActivitiesSection({
                     </button>
                     <button
                       onClick={handleCancelNewRecurring}
-                      className="p-1 cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
+                      className="p-1 cursor-pointer hover:bg-gray-100 rounded-xl transition-colors"
                       aria-label="Annuler"
                     >
                       <svg
@@ -515,7 +515,7 @@ export default function RecurringActivitiesSection({
                             handleDeleteRecurring(index)
                           }}
                           onDragStart={(e) => e.stopPropagation()}
-                          className="p-1 cursor-pointer hover:bg-gray-100 rounded-full transition-colors ml-1"
+                          className="p-1 cursor-pointer hover:bg-gray-100 rounded-xl transition-colors ml-1"
                           aria-label="Supprimer cette activité récurrente"
                           title="Supprimer"
                         >

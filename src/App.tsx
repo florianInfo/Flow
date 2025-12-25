@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Activity } from './models/Activity'
 import { ScheduledActivity, PlannedActivity, User } from './models/Planning'
-import ActivityBadge from './components/ActivityBadge'
 import ActivityModal from './components/ActivityModal'
 import Planner from './components/Planner'
 import Admin from './components/Admin'
@@ -9,6 +8,7 @@ import SearchActivitiesPanel from './components/SearchActivitiesPanel'
 import { ActivityDelete } from './utils/ActivityDelete'
 import { logApiRequest } from './utils/ApiLogger'
 import { generatePlannedActivities } from './utils/PlannedActivityGenerator'
+import { makeColorHappier } from './utils/ColorUtils'
 import { 
   getSavedUsers, 
   saveUserToFile, 
@@ -75,6 +75,34 @@ function App() {
         setLoading(false)
       })
   }, [])
+
+  // Mettre à jour toutes les couleurs personnalisées (hex) pour les rendre 10% plus joyeuses
+  // Utiliser un ref pour s'assurer que cela ne s'exécute qu'une seule fois
+  const colorsUpdatedRef = useRef(false)
+  useEffect(() => {
+    if (user.id && !loading && user.activities.length > 0 && !colorsUpdatedRef.current) {
+      const hasCustomColors = user.activities.some(
+        activity => typeof activity.color === 'string' && activity.color.startsWith('#')
+      )
+      
+      if (hasCustomColors) {
+        colorsUpdatedRef.current = true
+        setUser(prev => ({
+          ...prev,
+          activities: prev.activities.map(activity => {
+            // Si c'est une couleur personnalisée (hex), la rendre plus joyeuse
+            if (typeof activity.color === 'string' && activity.color.startsWith('#')) {
+              return {
+                ...activity,
+                color: makeColorHappier(activity.color)
+              }
+            }
+            return activity
+          })
+        }))
+      }
+    }
+  }, [user.id, loading, user.activities.length])
 
   // Sauvegarder le user dans localStorage à chaque modification
   useEffect(() => {
@@ -636,17 +664,6 @@ function App() {
     logPlannerUpdate('onWeekChange', { weekStart })
   }
 
-  // Générer des transformations aléatoires pour chaque badge
-  const getRandomTransform = () => {
-    const rotation = (Math.random() - 0.5) * 10 // Rotation entre -5° et 5°
-    const translateX = (Math.random() - 0.5) * 20 // Translation X entre -10px et 10px
-    const translateY = (Math.random() - 0.5) * 20 // Translation Y entre -10px et 10px
-    return {
-      transform: `rotate(${rotation}deg) translate(${translateX}px, ${translateY}px)`,
-      transition: 'transform 0.3s ease-in-out'
-    }
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -673,30 +690,30 @@ function App() {
           <nav className="flex gap-2 items-center">
             <button
               onClick={() => setViewMode('activities')}
-              className={`px-4 py-2 rounded-full transition-colors ${
+              className={`px-4 py-2 rounded-xl transition-colors border-2 ${
                 viewMode === 'activities'
-                  ? 'bg-gray-700 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-black text-white border-black'
+                  : 'bg-white text-black border-black hover:bg-gray-100'
               }`}
             >
               Activités
             </button>
             <button
               onClick={() => setViewMode('planner')}
-              className={`px-4 py-2 rounded-full transition-colors ${
+              className={`px-4 py-2 rounded-xl transition-colors border-2 ${
                 viewMode === 'planner'
-                  ? 'bg-gray-700 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-black text-white border-black'
+                  : 'bg-white text-black border-black hover:bg-gray-100'
               }`}
             >
               Planner
             </button>
             <button
               onClick={() => setViewMode('admin')}
-              className={`px-4 py-2 rounded-full transition-colors ${
+              className={`px-4 py-2 rounded-xl transition-colors border-2 ${
                 viewMode === 'admin'
-                  ? 'bg-gray-700 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-black text-white border-black'
+                  : 'bg-white text-black border-black hover:bg-gray-100'
               }`}
             >
               Admin
@@ -723,30 +740,9 @@ function App() {
             showDragHint={false}
           />
           
-          {/* Grille des activités */}
-          <div className="flex-1 overflow-auto px-4 py-8">
-            <div className="flex flex-wrap justify-center items-center gap-4 max-w-6xl mx-auto select-none">
-              {user.activities
-                .filter(activity => activity.recurringActivities && activity.recurringActivities.length > 0)
-                .map((activity, index) => (
-                <div
-                  key={activity.id || index}
-                  style={getRandomTransform()}
-                  className="cursor-pointer hover:scale-110 transition-transform duration-300"
-                  onClick={() => handleActivityClick(activity)}
-                >
-                  <ActivityBadge
-                    activity={activity}
-                    onDelete={handleDelete}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-          
           <button
             onClick={handleCreateActivity}
-            className="fixed top-[75%] left-1/2 transform -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-lg hover:bg-gray-800 transition-colors cursor-pointer"
+            className="fixed top-[75%] left-1/2 transform -translate-x-1/2 bg-black text-white px-6 py-3 rounded-xl shadow-lg hover:bg-gray-800 transition-colors cursor-pointer"
           >
             + Créer une activité
           </button>
@@ -766,7 +762,7 @@ function App() {
           <div className="border-b bg-gray-50">
             <button
               onClick={() => setIsActivitiesPanelOpen(!isActivitiesPanelOpen)}
-              className="w-full px-4 py-2 flex items-center justify-between hover:bg-gray-100 transition-colors rounded-full"
+              className="w-full px-4 py-2 flex items-center justify-between hover:bg-gray-100 transition-colors rounded-xl"
             >
               <span className="font-medium">Activités disponibles</span>
               <span className="text-gray-500">

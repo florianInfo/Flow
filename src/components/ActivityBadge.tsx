@@ -28,7 +28,7 @@ export default function ActivityBadge({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full shadow-sm transition-all duration-300 ease-in-out ${
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-sm transition-all duration-300 ease-in-out ${
         draggable || onClick ? 'cursor-pointer hover:scale-110 hover:rotate-2' : 'cursor-default'
       }`}
       style={{
@@ -43,7 +43,7 @@ export default function ActivityBadge({
             e.stopPropagation()
             onDelete(activity.id)
           }}
-          className={`ml-1 cursor-pointer hover:opacity-70 hover:scale-125 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-full ${textColor === 'white' ? 'text-white' : 'text-black'}`}
+          className={`ml-1 cursor-pointer hover:opacity-70 hover:scale-125 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-xl ${textColor === 'white' ? 'text-white' : 'text-black'}`}
           aria-label="Supprimer l'activité"
         >
           <svg

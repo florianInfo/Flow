@@ -47,7 +47,7 @@ export default function SearchActivitiesPanel({
           placeholder="Rechercher une activité..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 px-3 py-2 border border-black rounded-full outline-none focus:ring-2 focus:ring-black text-black"
+          className="flex-1 px-3 py-2 border border-black rounded-xl outline-none focus:ring-2 focus:ring-black text-black"
           style={{
             '--tw-ring-color': '#000000',
           } as React.CSSProperties}
@@ -57,13 +57,13 @@ export default function SearchActivitiesPanel({
           <button
             type="button"
             onClick={() => setShowTasks(!showTasks)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+            className={`relative inline-flex h-6 w-11 items-center rounded-xl transition-colors ${
               showTasks ? 'bg-black' : 'bg-gray-300'
             }`}
             aria-label="Afficher les task"
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              className={`inline-block h-4 w-4 transform rounded-xl bg-white transition-transform ${
                 showTasks ? 'translate-x-6' : 'translate-x-1'
               }`}
             />

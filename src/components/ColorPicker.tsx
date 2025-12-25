@@ -64,7 +64,7 @@ export default function ColorPicker({
             <button
               key={color}
               onClick={() => handlePresetColorClick(color)}
-              className={`w-8 h-8 rounded-full transition-all ${
+              className={`w-8 h-8 rounded-xl transition-all ${
                 isSelected ? 'ring-2 ring-offset-2 scale-110' : 'hover:scale-105'
               }`}
               style={{
@@ -81,7 +81,7 @@ export default function ColorPicker({
         {/* Bouton pour ouvrir le color picker personnalisé */}
         <button
           onClick={handleCustomColorClick}
-              className={`w-8 h-8 rounded-full transition-all border-2 ${textColor === 'white' ? 'border-white' : 'border-black'} ${
+              className={`w-8 h-8 rounded-xl transition-all border-2 ${textColor === 'white' ? 'border-white' : 'border-black'} ${
                 showCustomPicker || (typeof selectedColor === 'string' && selectedColor.startsWith('#'))
                   ? 'ring-2 ring-offset-2 scale-110' 
                   : 'hover:scale-105'
@@ -151,7 +151,7 @@ export default function ColorPicker({
           </div>
           <button
             onClick={() => setShowCustomPicker(false)}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
+            className="p-1 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0"
             aria-label="Fermer le color picker"
           >
             <svg
@@ -198,7 +198,7 @@ export default function ColorPicker({
           <div className="flex items-center gap-3">
             <button
               onClick={() => onTextColorChange('black')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all ${
                 textColor === 'black'
                   ? 'bg-black text-white'
                   : 'bg-white text-black hover:bg-gray-100'
@@ -208,12 +208,12 @@ export default function ColorPicker({
               } as React.CSSProperties}
               aria-label="Texte noir"
             >
-              <div className="w-4 h-4 rounded-full bg-black border border-gray-300"></div>
+              <div className="w-4 h-4 rounded-xl bg-black border border-gray-300"></div>
               <span className="text-sm font-medium">Noir</span>
             </button>
             <button
               onClick={() => onTextColorChange('white')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all ${
                 textColor === 'white'
                   ? 'bg-black text-white'
                   : 'bg-white text-black hover:bg-gray-100'
@@ -223,7 +223,7 @@ export default function ColorPicker({
               } as React.CSSProperties}
               aria-label="Texte blanc"
             >
-              <div className="w-4 h-4 rounded-full bg-white border border-gray-300"></div>
+              <div className="w-4 h-4 rounded-xl bg-white border border-gray-300"></div>
               <span className="text-sm font-medium">Blanc</span>
             </button>
           </div>
