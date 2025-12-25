@@ -61,14 +61,10 @@ export default function ActivityBlock({
     borderRadius: '4px',
     padding: '4px 8px',
     fontSize: '12px',
-    opacity: isScheduled ? 0.7 : 1,
-    borderWidth: isSelected ? '2px' : isScheduled ? '1px' : '0',
-    borderStyle: isSelected ? 'solid' : isScheduled ? 'dashed' : 'none',
-    borderColor: isSelected 
-      ? (activity.textColor === 'white' ? 'rgba(255,255,255,0.3)' : '#000000')
-      : isScheduled 
-        ? (activity.textColor === 'white' ? 'rgba(255,255,255,0.3)' : '#000000')
-        : 'transparent',
+    opacity: isScheduled ? 0.80 : 1,
+    borderWidth: isSelected ? '2.5px' : '1.5px',
+    borderStyle: 'solid',
+    borderColor: 'black',
     zIndex: isSelected ? 15 : isScheduled ? 5 : 10,
     cursor: isScheduled ? (isResizing ? 'ns-resize' : 'move') : 'default',
     marginLeft: position.left > 0 ? '2px' : '0',
@@ -77,7 +73,7 @@ export default function ActivityBlock({
     ...additionalStyle,
   }
 
-  const title = isScheduled ? `${activity.title} (récurrent)` : activity.title
+  const title = isScheduled ? `${activity.title}` : activity.title
   const startTime = planned?.startTime || scheduled?.startTime || ''
   const endTime = planned?.endTime || scheduled?.endTime || ''
 

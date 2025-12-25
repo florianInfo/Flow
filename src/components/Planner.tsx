@@ -722,8 +722,8 @@ export default function Planner({
                   style={{ 
                     boxSizing: 'border-box',
                     background: isToday 
-                      ? 'linear-gradient(to bottom, rgba(213, 196, 168, 1), rgba(213, 196, 168, 0.25))'
-                      : 'linear-gradient(to bottom, rgba(234, 221, 205, 1), rgba(234, 221, 205, 0.25))'
+                      ? 'linear-gradient(to bottom, rgb(255, 255, 255), rgba(255, 255, 255, 0.25))'
+                      : 'linear-gradient(to bottom, rgb(255, 255, 255), rgba(255, 255, 255, 0.25))'
                   }}
                 >
                   <div className="text-sm">{DAYS_OF_WEEK[dayOfWeek]}</div>
@@ -742,7 +742,7 @@ export default function Planner({
               {HOURS.map(hour => (
                 <div
                   key={hour}
-                  className="border-b"
+                  className="border-b-2"
                   style={{ height: `${SLOT_HEIGHT}px` }}
                 >
                   <div className="text-xs text-gray-500 p-1">{hour}h</div>
@@ -775,7 +775,7 @@ export default function Planner({
                       return (
                         <div
                           key={`${slot.hour}-${slot.minute}`}
-                          className="border-b border-r"
+                          className={`border-r ${slot.minute === 45 ? 'border-b-2' : slot.minute === 15 ? 'border-b' : slot.minute === 45 ? 'border-b-2' : 'border-b border-dashed'}`}
                           style={{
                             height: `${SLOT_HEIGHT / (60 / SLOT_MINUTES)}px`,
                             position: 'relative',
