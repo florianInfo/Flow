@@ -746,7 +746,7 @@ function App() {
           
           <button
             onClick={handleCreateActivity}
-            className="fixed top-[75%] left-1/2 transform -translate-x-1/2 bg-white text-black border-2 border-black px-8 py-4 rounded-xl shadow-lg hover:bg-black hover:text-white transition-colors cursor-pointer text-lg font-semibold"
+            className="fixed top-[75%] left-1/2 transform -translate-x-1/2 bg-white text-black border-2 border-black px-6 py-3 rounded-xl shadow-lg hover:bg-black hover:text-white transition-colors cursor-pointer"
           >
             + Créer une activité
           </button>
