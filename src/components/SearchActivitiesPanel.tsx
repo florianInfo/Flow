@@ -39,7 +39,7 @@ export default function SearchActivitiesPanel({
     : taskFilteredActivities
 
   return (
-    <div className="p-4 border-b bg-gray-50 flex-shrink-0">
+    <div className="p-4 border-b flex-shrink-0" style={{ backgroundColor: '#ece3d0' }}>
       {/* Barre de recherche et switch */}
       <div className="flex items-center gap-4 mb-3">
         <input

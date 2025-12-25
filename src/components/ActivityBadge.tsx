@@ -28,7 +28,7 @@ export default function ActivityBadge({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-sm transition-all duration-300 ease-in-out ${
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-sm transition-all duration-300 ease-in-out border-2 border-black ${
         draggable || onClick ? 'cursor-pointer hover:scale-110 hover:rotate-2' : 'cursor-default'
       }`}
       style={{

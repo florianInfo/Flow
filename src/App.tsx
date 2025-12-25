@@ -38,7 +38,6 @@ function App() {
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date())
   const [currentCalendarId] = useState<number>(1)
   const [plannerMode, setPlannerMode] = useState<'routine' | 'calendrier'>('routine')
-  const [isActivitiesPanelOpen, setIsActivitiesPanelOpen] = useState(true)
   const [draggedActivity, setDraggedActivity] = useState<Activity | null>(null)
 
 
@@ -666,14 +665,14 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#ece3d0' }}>
         <p className="text-gray-600">Chargement des activités...</p>
       </div>
     )
   }
 
   return (
-    <div className="h-screen bg-gray-50 select-none flex flex-col overflow-hidden">
+    <div className="h-screen select-none flex flex-col overflow-hidden" style={{ backgroundColor: '#ece3d0' }}>
       <header className="w-full px-4 py-1 flex-shrink-0" style={{ backgroundColor: '#ece3d0' }}>
         <div className="flex items-center justify-between">
           <img 
@@ -742,7 +741,7 @@ function App() {
           
           <button
             onClick={handleCreateActivity}
-            className="fixed top-[75%] left-1/2 transform -translate-x-1/2 bg-black text-white px-6 py-3 rounded-xl shadow-lg hover:bg-gray-800 transition-colors cursor-pointer"
+            className="fixed top-[75%] left-1/2 transform -translate-x-1/2 bg-white text-black border-2 border-black px-6 py-3 rounded-xl shadow-lg hover:bg-black hover:text-white transition-colors cursor-pointer"
           >
             + Créer une activité
           </button>
@@ -758,39 +757,30 @@ function App() {
         />
       ) : (
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          {/* Panneau collapsable pour les activités */}
-          <div className="border-b bg-gray-50">
-            <button
-              onClick={() => setIsActivitiesPanelOpen(!isActivitiesPanelOpen)}
-              className="w-full px-4 py-2 flex items-center justify-between hover:bg-gray-100 transition-colors rounded-xl"
-            >
-              <span className="font-medium">Activités disponibles</span>
-              <span className="text-gray-500">
-                {isActivitiesPanelOpen ? '▼' : '▶'}
-              </span>
-            </button>
-            {isActivitiesPanelOpen && (
-              <div className="border-t">
-                <SearchActivitiesPanel
-                  activities={user.activities.filter(activity => 
-                    activity.recurringActivities && activity.recurringActivities.length > 0
-                  )}
-                  onDragStart={(e, activity) => {
-                    e.dataTransfer.effectAllowed = 'move'
-                    e.dataTransfer.setData('activity', JSON.stringify(activity))
-                    setDraggedActivity(activity)
-                  }}
-                  onDragEnd={() => {
-                    setDraggedActivity(null)
-                  }}
-                  onActivityClick={handleActivityClick}
-                  disabled={plannerMode === 'calendrier'}
-                />
-              </div>
-            )}
+          {/* SearchActivitiesPanel - 30% de l'espace */}
+          <div className="flex-shrink-0 overflow-y-auto" style={{ flex: '0 0 30%' }}>
+            <SearchActivitiesPanel
+              activities={user.activities.filter(activity => 
+                activity.recurringActivities && activity.recurringActivities.length > 0
+              )}
+              onDragStart={(e, activity) => {
+                e.dataTransfer.effectAllowed = 'move'
+                e.dataTransfer.setData('activity', JSON.stringify(activity))
+                setDraggedActivity(activity)
+              }}
+              onDragEnd={() => {
+                setDraggedActivity(null)
+              }}
+              onActivityClick={handleActivityClick}
+              disabled={plannerMode === 'calendrier'}
+            />
           </div>
           
-          <div className="flex-1 min-h-0 overflow-hidden">
+          {/* Espace entre les deux - 10% */}
+          <div className="flex-shrink-0" style={{ flex: '0 0 10%' }}></div>
+          
+          {/* Planner - 60% de l'espace */}
+          <div className="flex-1 min-h-0 overflow-hidden" style={{ flex: '0 0 60%' }}>
             <Planner
               activities={user.activities}
               scheduledActivities={user.templates.flatMap(t => t.scheduledActivities)}
