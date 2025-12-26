@@ -46,6 +46,11 @@
   button, a, [role="button"], .cursor-pointer, [class*="cursor-pointer"] {
     cursor: pointer !important;
   }
+  
+  /* Tous les enfants d'un bouton héritent du curseur pointer */
+  button * {
+    cursor: pointer !important;
+  }
 }
 
 @layer components {

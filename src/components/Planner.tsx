@@ -9,8 +9,7 @@ import { getSlotFromMousePosition, PlannerDimensions, detectScrollZone, validate
 import { preparePlannedActivitiesForDay, prepareScheduledActivitiesForDay } from '../utils/PlannerActivityUtils'
 import { calculateHoverPreviewStyle } from '../utils/PlannerStyleUtils'
 import ActivityBlock from './ActivityBlock'
-import PlannerIcon from './PlannerIcon'
-import CalendarIcon from './CalendarIcon'
+import PlannerTools from './PlannerTools'
 
 type PlannerMode = 'routine' | 'calendrier'
 
@@ -31,6 +30,7 @@ interface PlannerProps {
   draggedActivity?: Activity | null
   onDragEnd?: () => void
   onModeChange?: (mode: PlannerMode) => void
+  mode?: PlannerMode
 }
 
 export default function Planner({
@@ -48,12 +48,26 @@ export default function Planner({
   draggedActivity: externalDraggedActivity,
   onDragEnd,
   onModeChange,
+  mode: externalMode,
 }: PlannerProps) {
   const { settings } = useAppSettings()
   const borderRadiusClass = getBorderRadiusFromSettings(settings)
   
   // Gestion interne du mode
-  const [mode, setMode] = useState<PlannerMode>('routine')
+  const [mode, setMode] = useState<PlannerMode>(externalMode || 'routine')
+  // Gestion du zoom local au planner
+  const [zoomLevel, setZoomLevel] = useState<number>(1)
+
+  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2))
+  const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5))
+  const handlePrint = () => window.print()
+  
+  // Synchroniser avec le mode externe si fourni
+  useEffect(() => {
+    if (externalMode !== undefined && externalMode !== mode) {
+      setMode(externalMode)
+    }
+  }, [externalMode])
   
   // Notifier le parent du changement de mode
   useEffect(() => {
@@ -681,6 +695,11 @@ export default function Planner({
     nextWeek.setDate(nextWeek.getDate() + 7)
     handleInternalWeekChange(nextWeek)
   }
+
+  const weekLabel =
+    mode === 'calendrier' && weekStart
+      ? `Semaine du ${weekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
+      : ''
   
   // Réinitialiser la semaine quand on passe en mode routine
   useEffect(() => {
@@ -761,7 +780,19 @@ export default function Planner({
   }, []) // Seulement au montage initial
 
   return (
-    <div className="flex flex-col h-full overflow-hidden pb-6">
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Barre d'outils du planner */}
+      <PlannerTools
+        currentMode={mode}
+        onModeChange={setMode}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onPrint={handlePrint}
+        currentWeekLabel={weekLabel}
+        onPreviousWeek={mode === 'calendrier' ? handlePreviousWeek : undefined}
+        onNextWeek={mode === 'calendrier' ? handleNextWeek : undefined}
+      />
+
       {/* Planner */}
       <div className="flex-1 flex flex-col bg-white min-h-0">
         {/* Zone scrollable avec les heures et les slots */}
@@ -773,58 +804,11 @@ export default function Planner({
             cursor: scrollCursor === 'up' ? 'n-resize' : scrollCursor === 'down' ? 's-resize' : undefined
           }}
         >
+          <div style={{ zoom: zoomLevel }}>
           {/* Header sticky avec les jours */}
           <div className="flex border-b sticky top-0 z-20 flex-shrink-0" style={{ boxSizing: 'border-box', width: '100%', background: 'linear-gradient(to bottom, rgba(234, 221, 205, 1), rgba(234, 221, 205, 0.25))' }}>
-            {/* Colonne des heures - sélecteur de mode */}
-            <div className="w-20 flex-shrink-0 border-r relative" style={{ boxSizing: 'border-box', background: 'linear-gradient(to bottom, rgba(234, 221, 205, 1), rgba(234, 221, 205, 0.25))' }}>
-              <div className="h-12 grid grid-cols-2 grid-rows-2 relative" style={{ border: 'none' }}>
-                {/* Barre diagonale traversant les cellules haut droite et bas gauche */}
-                <div 
-                  className="absolute top-0 left-0 w-full h-full pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(to bottom right, transparent calc(50% - 1px), #9ca3af calc(50% - 1px), #9ca3af calc(50% + 1px), transparent calc(50% + 1px))',
-                  }}
-                />
-                
-                {/* Cellule haut gauche - Mode Routine */}
-                <div className="flex items-center justify-center relative z-10">
-                  <button
-                    onClick={() => setMode('routine')}
-                    className={`flex items-center justify-center transition-all rounded-xl ${
-                      mode === 'routine' 
-                        ? 'bg-gray-700 text-white' 
-                        : 'bg-transparent hover:bg-gray-200'
-                    }`}
-                    style={{ width: '24px', height: '24px' }}
-                    title="Mode Routine"
-                  >
-                    <PlannerIcon isActive={mode === 'routine'} />
-                  </button>
-                </div>
-                
-                {/* Cellule haut droite - vide (barre diagonale visible) */}
-                <div className="relative z-10"></div>
-                
-                {/* Cellule bas gauche - vide (barre diagonale visible) */}
-                <div className="relative z-10"></div>
-                
-                {/* Cellule bas droite - Mode Calendrier */}
-                <div className="flex items-center justify-center relative z-10">
-                  <button
-                    onClick={() => setMode('calendrier')}
-                    className={`flex items-center justify-center transition-all rounded-xl ${
-                      mode === 'calendrier' 
-                        ? 'bg-gray-700 text-white' 
-                        : 'bg-transparent hover:bg-gray-200'
-                    }`}
-                    style={{ width: '24px', height: '24px' }}
-                    title="Mode Calendrier"
-                  >
-                    <CalendarIcon isActive={mode === 'calendrier'} />
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Colonne des heures - zone neutre (sans design ni icônes) */}
+            <div className="w-20 flex-shrink-0" />
 
             {/* En-têtes des jours */}
             {weekDays.map((day, dayIndex) => {
@@ -1049,28 +1033,9 @@ export default function Planner({
             })}
           </div>
         </div>
-      </div>
+        </div> {/* Fin zone zoomée */}
+      </div> {/* Fin zone scrollable */}
 
-      {/* Navigation de semaine - uniquement en mode calendrier */}
-      {mode === 'calendrier' && (
-        <div className="p-2 border-t bg-gray-50 flex items-center justify-between">
-          <button
-            onClick={handlePreviousWeek}
-            className="px-4 py-2 bg-gray-200 rounded-xl hover:bg-gray-300 transition-colors"
-          >
-            ← Semaine précédente
-          </button>
-          <div className="text-sm font-medium">
-            {weekStart && `Semaine du ${weekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`}
-          </div>
-          <button
-            onClick={handleNextWeek}
-            className="px-4 py-2 bg-gray-200 rounded-xl hover:bg-gray-300 transition-colors"
-          >
-            Semaine suivante →
-          </button>
-        </div>
-      )}
     </div>
   )
 }

@@ -72,8 +72,7 @@ export default function SearchActivitiesPanel({
   }
 
   return (
-    <div className="h-full flex flex-col p-2 relative">
-      {/* Bouton croix pour fermer */}
+    <div className="h-full flex flex-col p-2 relative justify-between">
       {onClose && (
         <button
           onClick={onClose}
@@ -94,7 +93,7 @@ export default function SearchActivitiesPanel({
       )}
 
       {/* Champ de recherche */}
-      <div className="mb-4 flex-shrink-0">
+      <div className="">
         <input
           type="text"
           placeholder="Rechercher une activité..."
@@ -108,7 +107,7 @@ export default function SearchActivitiesPanel({
       </div>
 
       {/* Switch avec borderRadiusClass variabilisé */}
-      <div className="mb-4 flex-shrink-0">
+      <div className="">
         <label className="flex items-center gap-2 cursor-pointer">
           <span className="text-sm font-medium text-black">Afficher les task</span>
           <button
@@ -130,12 +129,12 @@ export default function SearchActivitiesPanel({
 
       {/* Liste des activités - 50vh scrollable */}
       <div 
-        className="overflow-y-auto mb-4 flex-shrink-0" 
+        className={`overflow-y-auto p-4 flex-shrink-1 ${finalBorderRadiusClass} border border-black`}
         style={{ 
           scrollBehavior: 'smooth', 
           scrollbarWidth: 'thin',
-          height: '50vh',
-          flex: '0 0 50vh'
+          height: '50%',
+          flex: '0 0 50%'
         }}
       >
         {filteredActivities.length > 0 ? (

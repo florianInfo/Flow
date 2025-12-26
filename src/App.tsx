@@ -905,10 +905,10 @@ function App() {
           onDeleteSave={handleDeleteSave}
         />
       ) : (
-        <div className="flex-1 min-h-0 overflow-hidden flex relative">
+        <div className="flex-1 h-full mb-4 p-4 min-h-0 flex relative">
           {/* Planner - prend toute la page */}
-          <div className={`flex-1 min-h-0 overflow-hidden transition-all duration-300 ${isSearchPanelOpen ? 'mr-80' : 'mr-12'}`}>
-            <div className={`h-full m-4 ${borderRadiusClass} border border-black bg-white shadow-lg overflow-hidden`}>
+          <div className={`h-full flex-1 min-h-0 transition-all duration-300 ${isSearchPanelOpen ? 'mr-80' : 'mr-12'}`}>
+            <div className={`h-full ${borderRadiusClass} border border-black bg-white overflow-hidden`}>
               <Planner
                 activities={user.activities}
                 scheduledActivities={user.templates.flatMap(t => t.scheduledActivities)}
@@ -922,6 +922,7 @@ function App() {
                 onWeekChange={handleWeekChange}
                 draggedActivity={draggedActivity}
                 onDragEnd={() => setDraggedActivity(null)}
+                mode={plannerMode}
                 onModeChange={(mode) => setPlannerMode(mode)}
                 onActivityDoubleClick={(activityId, scheduledActivityId, mode) => {
                   const activity = user.activities.find(a => a.id === activityId)
@@ -949,11 +950,11 @@ function App() {
 
           {/* Panneau latéral de recherche - toujours visible, bandeau étroit quand fermé */}
           <div 
-            className={`fixed ${borderRadiusClass} top-24 right-0 bottom-0 bg-white border border-black shadow-lg transition-all duration-300 z-30 ${
+            className={`fixed ${borderRadiusClass} top-32 right-0 bottom-16 bg-white border border-black shadow-lg transition-all duration-300 z-30 ${
               isSearchPanelOpen ? 'w-80' : 'w-12'
             }`}
           >
-            <div className={`h-full ${borderRadiusClass} overflow-hidden flex flex-col`}>
+            <div className={`h-full ${borderRadiusClass} flex flex-col overflow-hidden`}>
               <SearchActivitiesPanel
                 activities={user.activities}
                 onDragStart={(e, activity) => {

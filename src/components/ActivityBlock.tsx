@@ -77,6 +77,7 @@ export default function ActivityBlock({
   const title = isScheduled ? `${activity.title}` : activity.title
   const startTime = planned?.startTime || scheduled?.startTime || ''
   const endTime = planned?.endTime || scheduled?.endTime || ''
+  const isCompact = position.height < 40
 
   return (
     <div
@@ -86,7 +87,7 @@ export default function ActivityBlock({
       onDragOver={onDragOver}
       onDrop={onDrop}
       style={baseStyle}
-      className={`flex flex-col justify-center relative ${borderRadiusClass}`}
+      className={`flex ${isCompact ? 'flex-row items-center gap-1' : 'flex-col justify-center items-center'} relative ${borderRadiusClass}`}
       title={title}
       onClick={onSelect}
       onDoubleClick={onDoubleClick}
@@ -129,7 +130,7 @@ export default function ActivityBlock({
 
       {/* Contenu de l'activité */}
       <div className={`font-medium truncate ${activity.textColor === 'white' ? 'text-white' : 'text-black'}`}>{activity.title}</div>
-      <div className={`text-xs ${activity.textColor === 'white' ? 'text-gray-300' : 'text-gray-600'}`}>
+      <div className={`${isCompact ? 'text-[10px]' : 'text-xs'} ${activity.textColor === 'white' ? 'text-gray-300' : 'text-gray-600'} ${isCompact ? 'whitespace-nowrap' : ''}`}>
         {startTime} - {endTime}
       </div>
 

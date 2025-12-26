@@ -130,11 +130,6 @@ export default function ActivityModal({
       updatedPeriodicity.weekOfMonth = undefined
     }
     
-    // Pour weekdays, on ignore la fréquence (toujours du lundi au vendredi)
-    if (field === 'unit' && value === 'weekdays') {
-      updatedPeriodicity.frequency = 1
-    }
-    
     setPeriodicity(updatedPeriodicity)
     
     // Mettre à jour la scheduledActivity
