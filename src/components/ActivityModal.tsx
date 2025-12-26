@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Activity, RecurringActivity, Color } from '../models/Activity'
+import { Activity, RecurringActivity, Color, Task } from '../models/Activity'
 import { ScheduledActivity, Periodicity } from '../models/Planning'
 import { getColorHex } from '../utils/ColorUtils'
 import RecurringActivitiesSection from './RecurringActivitiesSection'
+import TasksList from './TasksList'
 import ColorPicker from './ColorPicker'
 
 interface ActivityModalProps {
@@ -43,6 +44,7 @@ export default function ActivityModal({
     color: activity?.color || Color.TEAL_MUTED,
     textColor: activity?.textColor || 'black',
     recurringActivities: activity?.recurringActivities || [],
+    tasks: activity?.tasks || [],
   })
 
   useEffect(() => {
@@ -55,6 +57,7 @@ export default function ActivityModal({
           color: activity.color,
           textColor: activity.textColor || 'black',
           recurringActivities: activity.recurringActivities || [],
+          tasks: activity.tasks || [],
         })
       } else {
         setFormData({
@@ -63,6 +66,7 @@ export default function ActivityModal({
           color: Color.TEAL_MUTED,
           textColor: 'black',
           recurringActivities: [],
+          tasks: [],
         })
       }
       setIsEditingTitle(false)
@@ -124,6 +128,11 @@ export default function ActivityModal({
     // Si on change d'unit et ce n'est pas monthly, réinitialiser weekOfMonth
     if (field === 'unit' && value !== 'monthly') {
       updatedPeriodicity.weekOfMonth = undefined
+    }
+    
+    // Pour weekdays, on ignore la fréquence (toujours du lundi au vendredi)
+    if (field === 'unit' && value === 'weekdays') {
+      updatedPeriodicity.frequency = 1
     }
     
     setPeriodicity(updatedPeriodicity)
@@ -208,6 +217,23 @@ export default function ActivityModal({
       setFormData(activityToSave)
     }
     onSave(activityToSave)
+  }
+
+  const handleTasksUpdate = (updatedTasks: Task[]) => {
+    const updatedFormData = {
+      ...formData,
+      tasks: updatedTasks,
+    }
+    setFormData(updatedFormData)
+  }
+
+  const handleTasksSave = (_activityId: number | undefined, tasks: Task[]) => {
+    const updatedFormData = {
+      ...formData,
+      tasks: tasks,
+    }
+    setFormData(updatedFormData)
+    onSave(updatedFormData)
   }
 
   const backgroundColor = getColorHex(formData.color)
@@ -369,49 +395,81 @@ export default function ActivityModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex flex-col m-2">
+        <div className="flex-1 flex flex-col m-2 gap-2">
           {!readOnly ? (
-            <RecurringActivitiesSection
-              recurringActivities={formData.recurringActivities || []}
-              activities={activities}
-              currentActivityId={formData.id}
-              backgroundColor={backgroundColor}
-              textColor={textColor}
-              onUpdate={handleRecurringActivitiesUpdate}
-              onActivityClick={onActivityClick}
-              onSave={handleRecurringActivitiesSave}
-              getCurrentActivity={getCurrentActivity}
-              isOpen={isOpen}
-            />
+            <>
+              <RecurringActivitiesSection
+                recurringActivities={formData.recurringActivities || []}
+                activities={activities}
+                currentActivityId={formData.id}
+                backgroundColor={backgroundColor}
+                textColor={textColor}
+                onUpdate={handleRecurringActivitiesUpdate}
+                onActivityClick={onActivityClick}
+                onSave={handleRecurringActivitiesSave}
+                getCurrentActivity={getCurrentActivity}
+                isOpen={isOpen}
+              />
+              <TasksList
+                tasks={formData.tasks || []}
+                activityId={formData.id}
+                userId={activity?.id ? 1 : undefined}
+                backgroundColor={backgroundColor}
+                textColor={textColor}
+                onUpdate={handleTasksUpdate}
+                onSave={handleTasksSave}
+                isOpen={isOpen}
+                maxDepth={10}
+              />
+            </>
           ) : (
-            <div className="px-4 py-2">
-              <h3 className={`font-semibold mb-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Activités récurrentes</h3>
-              {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
-                <div className="space-y-2">
-                  {formData.recurringActivities.map((recurring, index) => {
-                    const linkedActivity = activities.find(a => a.id === recurring.targetedActivityId)
-                    return (
+            <>
+              <div className="px-4 py-2">
+                <h3 className={`font-semibold mb-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Activités récurrentes</h3>
+                {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
+                  <div className="space-y-2">
+                    {formData.recurringActivities.map((recurring, index) => {
+                      const linkedActivity = activities.find(a => a.id === recurring.targetedActivityId)
+                      return (
+                        <div key={index} className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              if (onActivityClick && linkedActivity?.id) {
+                                onActivityClick(linkedActivity.id)
+                              }
+                            }}
+                            className={`underline cursor-pointer transition-colors text-left ${textColor === 'white' ? 'text-blue-300 hover:text-blue-100' : 'text-blue-600 hover:text-blue-800'}`}
+                            disabled={!onActivityClick || !linkedActivity}
+                          >
+                            {linkedActivity?.title || `Activité ${recurring.targetedActivityId}`}
+                          </button>
+                          <span className={textColor === 'white' ? 'text-white' : 'text-black'}>: {recurring.percent}%</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className={`opacity-50 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Aucune activité récurrente</p>
+                )}
+              </div>
+              <div className="px-4 py-2">
+                <h3 className={`font-semibold mb-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Tâches</h3>
+                {formData.tasks && formData.tasks.length > 0 ? (
+                  <div className="space-y-2">
+                    {formData.tasks.map((task, index) => (
                       <div key={index} className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            if (onActivityClick && linkedActivity?.id) {
-                              onActivityClick(linkedActivity.id)
-                            }
-                          }}
-                          className={`underline cursor-pointer transition-colors text-left ${textColor === 'white' ? 'text-blue-300 hover:text-blue-100' : 'text-blue-600 hover:text-blue-800'}`}
-                          disabled={!onActivityClick || !linkedActivity}
-                        >
-                          {linkedActivity?.title || `Activité ${recurring.targetedActivityId}`}
-                        </button>
-                        <span className={textColor === 'white' ? 'text-white' : 'text-black'}>: {recurring.percent}%</span>
+                        <input type="checkbox" checked={task.isChecked || false} disabled />
+                        <span className={textColor === 'white' ? 'text-white' : 'text-black'}>
+                          {task.title || 'Tâche sans titre'}
+                        </span>
                       </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className={`opacity-50 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Aucune activité récurrente</p>
-              )}
-            </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className={`opacity-50 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Aucune tâche</p>
+                )}
+              </div>
+            </>
           )}
         </div>
 

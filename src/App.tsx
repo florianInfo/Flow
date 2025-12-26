@@ -537,6 +537,27 @@ function App() {
         break
       }
       
+      case 'onPlannedActivityCreate': {
+        const planned = params.planned as PlannedActivity
+        
+        logApiRequest({
+          method: 'POST',
+          path: '/api/users/:userId/calendars/:calendarId/planned-activities',
+          pathParams: { 
+            userId: user.id!, 
+            calendarId: currentCalendarId
+          },
+          body: {
+            activityId: planned.activityId,
+            date: planned.date,
+            startTime: planned.startTime,
+            endTime: planned.endTime,
+            scheduledActivityId: planned.scheduledActivityId
+          }
+        })
+        break
+      }
+      
       case 'onWeekChange': {
         logApiRequest({
           method: 'GET',
@@ -768,6 +789,32 @@ function App() {
     logPlannerUpdate('onPlannedActivityUpdate', { planned })
   }
 
+  const handlePlannedActivityCreate = (planned: PlannedActivity) => {
+    setUser(prev => {
+      const currentCalendar = prev.calendars.find(c => c.id === currentCalendarId)
+      if (!currentCalendar) return prev
+
+      // Générer un nouvel ID pour la PlannedActivity
+      const existingIds = currentCalendar.plannedActivities.map(p => p.id || 0)
+      const newId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1
+
+      const newPlanned: PlannedActivity = {
+        ...planned,
+        id: newId,
+      }
+
+      return {
+        ...prev,
+        calendars: prev.calendars.map(cal =>
+          cal.id === currentCalendarId
+            ? { ...cal, plannedActivities: [...cal.plannedActivities, newPlanned] }
+            : cal
+        ),
+      }
+    })
+
+    logPlannerUpdate('onPlannedActivityCreate', { planned })
+  }
 
   const handleWeekChange = (weekStart: Date) => {
     setCurrentWeek(weekStart)
@@ -870,6 +917,7 @@ function App() {
                 onScheduledActivityUpdate={handleScheduledActivityUpdate}
                 onScheduledActivityDelete={handleScheduledActivityDelete}
                 onPlannedActivityUpdate={handlePlannedActivityUpdate}
+                onPlannedActivityCreate={handlePlannedActivityCreate}
                 currentWeek={currentWeek}
                 onWeekChange={handleWeekChange}
                 draggedActivity={draggedActivity}

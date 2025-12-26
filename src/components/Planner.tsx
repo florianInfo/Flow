@@ -24,6 +24,7 @@ interface PlannerProps {
   onScheduledActivityUpdate?: (scheduled: ScheduledActivity) => void
   onScheduledActivityDelete?: (scheduledActivityId: number) => void
   onPlannedActivityUpdate?: (planned: PlannedActivity) => void
+  onPlannedActivityCreate?: (planned: PlannedActivity) => void
   currentWeek?: Date
   onWeekChange?: (weekStart: Date) => void
   onActivityDoubleClick?: (activityId: number, scheduledActivityId?: number, mode?: PlannerMode) => void
@@ -40,6 +41,7 @@ export default function Planner({
   onScheduledActivityUpdate,
   onScheduledActivityDelete,
   onPlannedActivityUpdate,
+  onPlannedActivityCreate,
   currentWeek = new Date(),
   onWeekChange,
   onActivityDoubleClick,
@@ -93,12 +95,92 @@ export default function Planner({
   const [hoveredSlot, setHoveredSlot] = useState<{ day: Date; hour: number; minute: number } | null>(null)
   const [selectedPlannedActivity, setSelectedPlannedActivity] = useState<PlannedActivity | null>(null)
   const [selectedScheduledActivity, setSelectedScheduledActivity] = useState<ScheduledActivity | null>(null)
+  const [copiedBlock, setCopiedBlock] = useState<{ type: 'planned' | 'scheduled'; data: PlannedActivity | ScheduledActivity; activityId: number } | null>(null)
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null)
   const [resizeStartY, setResizeStartY] = useState<number | null>(null)
   const [resizeStartTime, setResizeStartTime] = useState<string | null>(null)
   const [resizeStartScrollTop, setResizeStartScrollTop] = useState<number | null>(null)
   const [scrollCursor, setScrollCursor] = useState<'up' | 'down' | null>(null)
   const plannerRef = useRef<HTMLDivElement>(null)
+
+  // Gestionnaire pour copier (Ctrl+C)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Vérifier si Ctrl+C est pressé
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        // Vérifier si un bloc est sélectionné
+        if (selectedPlannedActivity) {
+          const activity = activities.find(a => a.id === selectedPlannedActivity.activityId)
+          if (activity) {
+            setCopiedBlock({
+              type: 'planned',
+              data: selectedPlannedActivity,
+              activityId: activity.id!,
+            })
+            e.preventDefault()
+          }
+        } else if (selectedScheduledActivity) {
+          const activity = activities.find(a => a.id === selectedScheduledActivity.activityId)
+          if (activity) {
+            setCopiedBlock({
+              type: 'scheduled',
+              data: selectedScheduledActivity,
+              activityId: activity.id!,
+            })
+            e.preventDefault()
+          }
+        }
+      }
+      
+      // Vérifier si Ctrl+V est pressé
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (copiedBlock && hoveredSlot) {
+          const { day, hour, minute } = hoveredSlot
+          
+          if (copiedBlock.type === 'planned') {
+            const planned = copiedBlock.data as PlannedActivity
+            const duration = timeToMinutes(planned.endTime) - timeToMinutes(planned.startTime)
+            const adjusted = adjustTimeBounds(hour, minute, duration, START_HOUR, END_HOUR)
+            
+            if (adjusted) {
+              const { startMinutes, endMinutes } = adjusted
+              const newPlanned: PlannedActivity = {
+                ...planned,
+                id: undefined, // Nouvel ID sera généré
+                date: day.toISOString().split('T')[0],
+                startTime: minutesToTime(startMinutes),
+                endTime: minutesToTime(endMinutes),
+              }
+              onPlannedActivityCreate?.(newPlanned)
+              e.preventDefault()
+            }
+          } else if (copiedBlock.type === 'scheduled') {
+            const scheduled = copiedBlock.data as ScheduledActivity
+            const duration = timeToMinutes(scheduled.endTime) - timeToMinutes(scheduled.startTime)
+            const adjusted = adjustTimeBounds(hour, minute, duration, START_HOUR, END_HOUR)
+            
+            if (adjusted) {
+              const { startMinutes, endMinutes } = adjusted
+              const newScheduled: ScheduledActivity = {
+                ...scheduled,
+                id: undefined, // Nouvel ID sera généré
+                startTime: minutesToTime(startMinutes),
+                endTime: minutesToTime(endMinutes),
+                dayOfWeek: day.getDay(),
+              }
+              onScheduledActivityCreate?.(newScheduled, day)
+              e.preventDefault()
+            }
+          }
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [selectedPlannedActivity, selectedScheduledActivity, copiedBlock, hoveredSlot, activities, START_HOUR, END_HOUR, onPlannedActivityCreate, onScheduledActivityCreate])
 
   // Calculer le début de la semaine (lundi) - uniquement en mode calendrier
   const weekStart = useMemo(() => {
@@ -824,6 +906,8 @@ export default function Planner({
                             // Désélectionner les activités si on clique sur un slot vide
                             setSelectedPlannedActivity(null)
                             setSelectedScheduledActivity(null)
+                            // Mettre à jour hoveredSlot pour permettre le collage
+                            setHoveredSlot({ day, hour: slot.hour, minute: slot.minute })
                           }}
                         />
                       )
