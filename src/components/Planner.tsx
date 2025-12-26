@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Activity } from '../models/Activity'
-import { ScheduledActivity, PlannedActivity } from '../models/Planning'
+import { ScheduledActivity, PlannedActivity, Template } from '../models/Planning'
 import { useAppSettings } from '../contexts/AppSettingsContext'
 import { getBorderRadiusFromSettings } from '../utils/BorderRadiusUtils'
 import { timeToMinutes, minutesToTime, adjustTimeBounds } from '../utils/TimeUtils'
@@ -10,6 +10,7 @@ import { preparePlannedActivitiesForDay, prepareScheduledActivitiesForDay } from
 import { calculateHoverPreviewStyle } from '../utils/PlannerStyleUtils'
 import ActivityBlock from './ActivityBlock'
 import PlannerTools from './PlannerTools'
+import { decreaseZoom, formatWeekLabel, getNextWeekStart, getPreviousWeekStart, increaseZoom, printPlanner } from '../utils/PlannerToolUtils'
 
 type PlannerMode = 'routine' | 'calendrier'
 
@@ -19,6 +20,7 @@ interface PlannerProps {
   activities: Activity[]
   scheduledActivities: ScheduledActivity[]
   plannedActivities: PlannedActivity[]
+  templates?: Template[]
   onScheduledActivityCreate?: (scheduled: ScheduledActivity, day?: Date) => void
   onScheduledActivityUpdate?: (scheduled: ScheduledActivity) => void
   onScheduledActivityDelete?: (scheduledActivityId: number) => void
@@ -37,6 +39,7 @@ export default function Planner({
   activities,
   scheduledActivities,
   plannedActivities,
+  templates,
   onScheduledActivityCreate,
   onScheduledActivityUpdate,
   onScheduledActivityDelete,
@@ -53,14 +56,33 @@ export default function Planner({
   const { settings } = useAppSettings()
   const borderRadiusClass = getBorderRadiusFromSettings(settings)
   
+  // Templates affichés dans le planner (mode routine)
+  const [currentTemplates, setCurrentTemplates] = useState<Template[]>(templates || [])
+  useEffect(() => {
+    setCurrentTemplates(templates || [])
+  }, [templates])
+
   // Gestion interne du mode
   const [mode, setMode] = useState<PlannerMode>(externalMode || 'routine')
   // Gestion du zoom local au planner
   const [zoomLevel, setZoomLevel] = useState<number>(1)
 
-  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2))
-  const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5))
-  const handlePrint = () => window.print()
+  const handleZoomIn = () => setZoomLevel(prev => increaseZoom(prev))
+  const handleZoomOut = () => setZoomLevel(prev => decreaseZoom(prev))
+  const handlePrint = () => {
+    const printableScheduled = mode === 'routine' ? effectiveScheduledActivities : []
+    const daysForPrint = mode === 'routine' ? weekDays : []
+    printPlanner({
+      mode,
+      weekLabel,
+      weekDays: daysForPrint,
+      scheduledActivities: printableScheduled,
+      activities,
+      hours: HOURS,
+      slotHeight: SLOT_HEIGHT,
+      startHour: START_HOUR,
+    })
+  }
   
   // Synchroniser avec le mode externe si fourni
   useEffect(() => {
@@ -95,6 +117,10 @@ export default function Planner({
   const SLOT_MINUTES = settings.planner.slotMinutes
   const DEFAULT_ACTIVITY_DURATION = settings.planner.defaultActivityDuration
   const SCROLL_THRESHOLD = settings.planner.scrollThreshold
+  const routineScheduledActivities = useMemo(
+    () => currentTemplates.flatMap(t => t.scheduledActivities),
+    [currentTemplates]
+  )
   
   // Calculer les heures dynamiquement
   const HOURS = useMemo(() => {
@@ -106,6 +132,7 @@ export default function Planner({
   const draggedActivity = externalDraggedActivity ?? internalDraggedActivity
   const [draggedPlannedActivity, setDraggedPlannedActivity] = useState<PlannedActivity | null>(null) // Activité planifiée draguée
   const [draggedScheduledActivity, setDraggedScheduledActivity] = useState<ScheduledActivity | null>(null) // Activité scheduled draguée
+  const effectiveScheduledActivities = mode === 'routine' ? routineScheduledActivities : scheduledActivities
   const [hoveredSlot, setHoveredSlot] = useState<{ day: Date; hour: number; minute: number } | null>(null)
   const [selectedPlannedActivity, setSelectedPlannedActivity] = useState<PlannedActivity | null>(null)
   const [selectedScheduledActivity, setSelectedScheduledActivity] = useState<ScheduledActivity | null>(null)
@@ -272,7 +299,7 @@ export default function Planner({
     
     // Si la plannedActivity a un scheduledActivityId, modifier la scheduledActivity source
     if (planned.scheduledActivityId) {
-      const scheduled = scheduledActivities.find(s => s.id === planned.scheduledActivityId)
+      const scheduled = effectiveScheduledActivities.find(s => s.id === planned.scheduledActivityId)
       if (scheduled) {
         const updated: ScheduledActivity = {
           ...scheduled,
@@ -556,7 +583,7 @@ export default function Planner({
       // Si la plannedActivity a un scheduledActivityId, on va modifier la scheduledActivity source
       // mais on garde selectedPlannedActivity pour le preview visuel
       if (selectedPlannedActivity.scheduledActivityId) {
-        const scheduled = scheduledActivities.find(s => s.id === selectedPlannedActivity.scheduledActivityId)
+        const scheduled = effectiveScheduledActivities.find(s => s.id === selectedPlannedActivity.scheduledActivityId)
         if (scheduled) {
           // Mettre à jour la plannedActivity pour le preview visuel
           const updatedPlanned: PlannedActivity = {
@@ -613,7 +640,7 @@ export default function Planner({
     if (selectedPlannedActivity) {
       // Si la plannedActivity a un scheduledActivityId, modifier la scheduledActivity source
       if (selectedPlannedActivity.scheduledActivityId) {
-        const scheduled = scheduledActivities.find(s => s.id === selectedPlannedActivity.scheduledActivityId)
+        const scheduled = effectiveScheduledActivities.find(s => s.id === selectedPlannedActivity.scheduledActivityId)
         if (scheduled && selectedScheduledActivity) {
           onScheduledActivityUpdate?.(selectedScheduledActivity)
         }
@@ -659,7 +686,7 @@ export default function Planner({
   useEffect(() => {
     // Synchroniser selectedScheduledActivity avec les props
     if (selectedScheduledActivity && !isResizing) {
-      const updated = scheduledActivities.find(s => s.id === selectedScheduledActivity.id)
+      const updated = effectiveScheduledActivities.find(s => s.id === selectedScheduledActivity.id)
       if (updated && (
         updated.startTime !== selectedScheduledActivity.startTime ||
         updated.endTime !== selectedScheduledActivity.endTime ||
@@ -680,26 +707,19 @@ export default function Planner({
         setSelectedPlannedActivity(updated)
       }
     }
-  }, [scheduledActivities, plannedActivities, isResizing])
+  }, [effectiveScheduledActivities, plannedActivities, isResizing])
 
   const handlePreviousWeek = () => {
     if (!weekStart) return
-    const prevWeek = new Date(weekStart)
-    prevWeek.setDate(prevWeek.getDate() - 7)
-    handleInternalWeekChange(prevWeek)
+    handleInternalWeekChange(getPreviousWeekStart(weekStart))
   }
 
   const handleNextWeek = () => {
     if (!weekStart) return
-    const nextWeek = new Date(weekStart)
-    nextWeek.setDate(nextWeek.getDate() + 7)
-    handleInternalWeekChange(nextWeek)
+    handleInternalWeekChange(getNextWeekStart(weekStart))
   }
 
-  const weekLabel =
-    mode === 'calendrier' && weekStart
-      ? `Semaine du ${weekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
-      : ''
+  const weekLabel = formatWeekLabel(mode, weekStart)
   
   // Réinitialiser la semaine quand on passe en mode routine
   useEffect(() => {
@@ -811,15 +831,15 @@ export default function Planner({
             <div className="w-20 flex-shrink-0" />
 
             {/* En-têtes des jours */}
-            {weekDays.map((day, dayIndex) => {
+            {weekDays.map((day, _dayIndex) => {
               const dayOfWeek = day.getDay()
               // En mode routine, on ne vérifie pas si c'est aujourd'hui (pas de date réelle)
               const isToday = mode === 'calendrier' && day.toDateString() === new Date().toDateString()
 
               return (
                 <div
-                  key={dayIndex}
-                  className={`flex-1 border-r last:border-r-0 h-12 text-center flex flex-col justify-center ${
+                  key={_dayIndex}
+                  className={`flex-1 border-r border-t last:border-r-0 h-12 text-center flex flex-col justify-center ${
                     isToday ? 'font-semibold' : ''
                   }`}
                   style={{ 
@@ -861,11 +881,11 @@ export default function Planner({
             </div>
 
             {/* Colonnes des jours */}
-            {weekDays.map((day, dayIndex) => {
+            {weekDays.map((day, _dayIndex) => {
               const dayOfWeek = day.getDay()
 
               return (
-                <div key={dayIndex} className="flex-1 border-r last:border-r-0 relative">
+                <div key={_dayIndex} className="flex-1 border-r last:border-r-0 relative">
                   {/* Slots horaires */}
                   <div className="relative" style={{ height: `${(HOURS.length + 1) * SLOT_HEIGHT}px` }}>
                   {HOURS.map(hour => {
@@ -932,7 +952,7 @@ export default function Planner({
 
                   {/* Afficher les activités planifiées (scheduled) - uniquement en mode routine */}
                   {mode === 'routine' && prepareScheduledActivitiesForDay(
-                    scheduledActivities,
+                    effectiveScheduledActivities,
                     day,
                     dayOfWeek,
                     selectedScheduledActivity,

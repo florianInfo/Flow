@@ -35,7 +35,7 @@ export default function ActivityBlock({
   position,
   isSelected,
   isResizing = false,
-  mode,
+  mode: _mode,
   onSelect,
   onDoubleClick,
   onDragStart,

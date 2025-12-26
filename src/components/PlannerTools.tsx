@@ -46,7 +46,7 @@ export default function PlannerTools({
   }
 
   return (
-    <div className={`w-full border-b border-black bg-white ${borderRadiusClass}`} style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
+    <div className={`w-full bg-white ${borderRadiusClass}`} style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
       <div className="flex items-center justify-between px-4 py-2 gap-4">
         {/* Section changement de vue */}
         <div className="flex items-center gap-2">

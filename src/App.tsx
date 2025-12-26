@@ -912,6 +912,7 @@ function App() {
               <Planner
                 activities={user.activities}
                 scheduledActivities={user.templates.flatMap(t => t.scheduledActivities)}
+                templates={user.templates}
                 plannedActivities={user.calendars.find(c => c.id === currentCalendarId)?.plannedActivities || []}
                 onScheduledActivityCreate={handleScheduledActivityCreate}
                 onScheduledActivityUpdate={handleScheduledActivityUpdate}
