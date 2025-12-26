@@ -238,7 +238,7 @@ export default function ActivityModal({
   const selectionColor = textColor === 'white' ? '#000000' : '#FFFFFF'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 h-75">
       <div 
         id={`activity-modal-${formData.id || 'new'}`}
         className="shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded-3xl p-4"
@@ -311,18 +311,20 @@ export default function ActivityModal({
                   }
                 }}
                 placeholder="Description de l'activité"
-                className={`italic p-2 cursor-text w-full border outline-none focus:ring-2 rounded resize-none ${textColor === 'white' ? 'text-gray-300' : 'text-gray-600'}`}
+                className={`overflow-y-auto italic p-2 cursor-text w-full border outline-none focus:ring-2 rounded resize-none ${textColor === 'white' ? 'text-gray-300' : 'text-gray-600'}`}
                 style={{ 
                   backgroundColor: 'transparent',
                   '--tw-ring-color': textColor === 'white' ? '#FFFFFF' : '#000000',
-                  borderColor: borderColor
+                  borderColor: borderColor,
+                  height: '80px',
                 } as React.CSSProperties}
                 rows={3}
               />
             ) : (
               <p 
-                className={`italic px-4 ${textColor === 'white' ? 'text-gray-300' : 'text-gray-600'} ${readOnly ? 'cursor-default' : 'cursor-text'} ${!formData.description ? 'opacity-50' : ''}`}
+                className={`overflow-y-auto italic px-4 ${textColor === 'white' ? 'text-gray-300' : 'text-gray-600'} ${readOnly ? 'cursor-default' : 'cursor-text'} ${!formData.description ? 'opacity-50' : ''}`}
                 onClick={readOnly ? undefined : () => setIsEditingDescription(true)}
+                style={{ whiteSpace: 'pre-wrap', maxHeight: '80px' }}
               >
                 {formData.description || "Description de l'activité"}
               </p>
@@ -389,128 +391,111 @@ export default function ActivityModal({
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 flex flex-col m-2 gap-2">
-          {!readOnly ? (
-            <>
-              <RecurringActivitiesSection
-                recurringActivities={formData.recurringActivities || []}
-                activities={activities}
-                currentActivityId={formData.id}
-                backgroundColor={backgroundColor}
-                textColor={textColor}
-                onUpdate={handleRecurringActivitiesUpdate}
-                onActivityClick={onActivityClick}
-                onSave={handleRecurringActivitiesSave}
-                getCurrentActivity={getCurrentActivity}
-                isOpen={isOpen}
-              />
-              <TasksList
-                tasks={formData.tasks || []}
-                activityId={formData.id}
-                userId={activity?.id ? 1 : undefined}
-                backgroundColor={backgroundColor}
-                textColor={textColor}
-                onUpdate={handleTasksUpdate}
-                onSave={handleTasksSave}
-                isOpen={isOpen}
-                maxDepth={10}
-              />
-            </>
-          ) : (
-            <>
-              <div className="px-4 py-2">
-                <h3 className={`font-semibold mb-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Activités récurrentes</h3>
-                {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
-                  <div className="space-y-2">
-                    {formData.recurringActivities.map((recurring, index) => {
-                      const linkedActivity = activities.find(a => a.id === recurring.targetedActivityId)
-                      return (
+        {/* Contenu scrollable */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="flex flex-col m-2 gap-2">
+            {!readOnly ? (
+              <>
+                <RecurringActivitiesSection
+                  recurringActivities={formData.recurringActivities || []}
+                  activities={activities}
+                  currentActivityId={formData.id}
+                  backgroundColor={backgroundColor}
+                  textColor={textColor}
+                  onUpdate={handleRecurringActivitiesUpdate}
+                  onActivityClick={onActivityClick}
+                  onSave={handleRecurringActivitiesSave}
+                  getCurrentActivity={getCurrentActivity}
+                  isOpen={isOpen}
+                />
+                <TasksList
+                  tasks={formData.tasks || []}
+                  activityId={formData.id}
+                  userId={activity?.id ? 1 : undefined}
+                  backgroundColor={backgroundColor}
+                  textColor={textColor}
+                  onUpdate={handleTasksUpdate}
+                  onSave={handleTasksSave}
+                  isOpen={isOpen}
+                  maxDepth={10}
+                />
+              </>
+            ) : (
+              <>
+                <div className="px-4 py-2">
+                  <h3 className={`font-semibold mb-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Activités récurrentes</h3>
+                  {formData.recurringActivities && formData.recurringActivities.length > 0 ? (
+                    <div className="space-y-2">
+                      {formData.recurringActivities.map((recurring, index) => {
+                        const linkedActivity = activities.find(a => a.id === recurring.targetedActivityId)
+                        return (
+                          <div key={index} className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                if (onActivityClick && linkedActivity?.id) {
+                                  onActivityClick(linkedActivity.id)
+                                }
+                              }}
+                              className={`underline cursor-pointer transition-colors text-left ${textColor === 'white' ? 'text-blue-300 hover:text-blue-100' : 'text-blue-600 hover:text-blue-800'}`}
+                              disabled={!onActivityClick || !linkedActivity}
+                            >
+                              {linkedActivity?.title || `Activité ${recurring.targetedActivityId}`}
+                            </button>
+                            <span className={textColor === 'white' ? 'text-white' : 'text-black'}>: {recurring.percent}%</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className={`opacity-50 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Aucune activité récurrente</p>
+                  )}
+                </div>
+                <div className="px-4 py-2">
+                  <h3 className={`font-semibold mb-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Tâches</h3>
+                  {formData.tasks && formData.tasks.length > 0 ? (
+                    <div className="space-y-2">
+                      {formData.tasks.map((task, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              if (onActivityClick && linkedActivity?.id) {
-                                onActivityClick(linkedActivity.id)
-                              }
-                            }}
-                            className={`underline cursor-pointer transition-colors text-left ${textColor === 'white' ? 'text-blue-300 hover:text-blue-100' : 'text-blue-600 hover:text-blue-800'}`}
-                            disabled={!onActivityClick || !linkedActivity}
-                          >
-                            {linkedActivity?.title || `Activité ${recurring.targetedActivityId}`}
-                          </button>
-                          <span className={textColor === 'white' ? 'text-white' : 'text-black'}>: {recurring.percent}%</span>
+                          <input type="checkbox" checked={task.isChecked || false} disabled />
+                          <span className={textColor === 'white' ? 'text-white' : 'text-black'}>
+                            {task.title || 'Tâche sans titre'}
+                          </span>
                         </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <p className={`opacity-50 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Aucune activité récurrente</p>
-                )}
-              </div>
-              <div className="px-4 py-2">
-                <h3 className={`font-semibold mb-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Tâches</h3>
-                {formData.tasks && formData.tasks.length > 0 ? (
-                  <div className="space-y-2">
-                    {formData.tasks.map((task, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <input type="checkbox" checked={task.isChecked || false} disabled />
-                        <span className={textColor === 'white' ? 'text-white' : 'text-black'}>
-                          {task.title || 'Tâche sans titre'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className={`opacity-50 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Aucune tâche</p>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={`opacity-50 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Aucune tâche</p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
 
-        {/* Section Fréquence de répétition - uniquement si on édite une scheduledActivity */}
-        {scheduledActivity && !readOnly && (
-          <div className="border-t p-4" style={{ borderColor: borderColor }}>
-            <h3 className={`font-semibold mb-3 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Fréquence de répétition</h3>
-            <div className="flex gap-2 items-center flex-wrap">
-              <input
-                type="number"
-                min="1"
-                value={periodicity.frequency}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value) || 1
-                  handlePeriodicityChange('frequency', value)
-                }}
-                className={`px-3 py-2 border rounded outline-none focus:ring-2 bg-transparent ${textColor === 'white' ? 'text-white' : 'text-black'}`}
-                style={{
-                  '--tw-ring-color': textColor === 'white' ? '#FFFFFF' : '#000000',
-                  borderColor: borderColor
-                } as React.CSSProperties}
-                placeholder="Fréquence"
-              />
-              <select
-                value={periodicity.unit}
-                onChange={(e) => {
-                  const value = e.target.value as 'daily' | 'weekly' | 'monthly'
-                  handlePeriodicityChange('unit', value)
-                }}
-                className={`px-3 py-2 border rounded outline-none focus:ring-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}
-                style={{
-                  backgroundColor: backgroundColor,
-                  '--tw-ring-color': textColor === 'white' ? '#FFFFFF' : '#000000',
-                  borderColor: borderColor
-                } as React.CSSProperties}
-              >
-                <option value="daily">Quotidien</option>
-                <option value="weekly">Hebdomadaire</option>
-                <option value="monthly">Mensuel</option>
-              </select>
-              {periodicity.unit === 'monthly' && (
-                <select
-                  value={periodicity.weekOfMonth || 1}
+          {/* Section Fréquence de répétition - uniquement si on édite une scheduledActivity */}
+          {scheduledActivity && !readOnly && (
+            <div className="border-t p-4" style={{ borderColor: borderColor }}>
+              <h3 className={`font-semibold mb-3 ${textColor === 'white' ? 'text-white' : 'text-black'}`}>Fréquence de répétition</h3>
+              <div className="flex gap-2 items-center flex-wrap">
+                <input
+                  type="number"
+                  min="1"
+                  value={periodicity.frequency}
                   onChange={(e) => {
-                    const value = parseInt(e.target.value)
-                    handlePeriodicityChange('weekOfMonth', value)
+                    const value = parseInt(e.target.value) || 1
+                    handlePeriodicityChange('frequency', value)
+                  }}
+                  className={`px-3 py-2 border rounded outline-none focus:ring-2 bg-transparent ${textColor === 'white' ? 'text-white' : 'text-black'}`}
+                  style={{
+                    '--tw-ring-color': textColor === 'white' ? '#FFFFFF' : '#000000',
+                    borderColor: borderColor
+                  } as React.CSSProperties}
+                  placeholder="Fréquence"
+                />
+                <select
+                  value={periodicity.unit}
+                  onChange={(e) => {
+                    const value = e.target.value as 'daily' | 'weekly' | 'monthly'
+                    handlePeriodicityChange('unit', value)
                   }}
                   className={`px-3 py-2 border rounded outline-none focus:ring-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}
                   style={{
@@ -519,19 +504,38 @@ export default function ActivityModal({
                     borderColor: borderColor
                   } as React.CSSProperties}
                 >
-                  <option value="1">1ère semaine</option>
-                  <option value="2">2ème semaine</option>
-                  <option value="3">3ème semaine</option>
-                  <option value="4">4ème semaine</option>
-                  <option value="-1">Dernière semaine</option>
+                  <option value="daily">Quotidien</option>
+                  <option value="weekly">Hebdomadaire</option>
+                  <option value="monthly">Mensuel</option>
                 </select>
-              )}
+                {periodicity.unit === 'monthly' && (
+                  <select
+                    value={periodicity.weekOfMonth || 1}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value)
+                      handlePeriodicityChange('weekOfMonth', value)
+                    }}
+                    className={`px-3 py-2 border rounded outline-none focus:ring-2 ${textColor === 'white' ? 'text-white' : 'text-black'}`}
+                    style={{
+                      backgroundColor: backgroundColor,
+                      '--tw-ring-color': textColor === 'white' ? '#FFFFFF' : '#000000',
+                      borderColor: borderColor
+                    } as React.CSSProperties}
+                  >
+                    <option value="1">1ère semaine</option>
+                    <option value="2">2ème semaine</option>
+                    <option value="3">3ème semaine</option>
+                    <option value="4">4ème semaine</option>
+                    <option value="-1">Dernière semaine</option>
+                  </select>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Footer - petit espace */}
-        <div className="p-4"></div>
+          {/* Footer - petit espace */}
+          <div className="p-4"></div>
+        </div>
 
       </div>
     </div>

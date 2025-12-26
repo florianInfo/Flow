@@ -102,7 +102,6 @@ export class TaskApiService {
           description: task.description,
           isChecked: task.isChecked,
           isDeleted: task.isDeleted,
-          periodicity: task.periodicity,
           subtasks: task.subtasks || [],
         })),
       },
