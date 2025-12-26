@@ -8,6 +8,7 @@ interface ActivityBadgeProps {
   onDragStart?: (e: React.DragEvent) => void
   onDragEnd?: () => void
   onClick?: () => void
+  onDoubleClick?: () => void
   borderRadiusClass?: string
 }
 
@@ -18,6 +19,7 @@ export default function ActivityBadge({
   onDragStart,
   onDragEnd,
   onClick,
+  onDoubleClick,
   borderRadiusClass = 'rounded-xl',
 }: ActivityBadgeProps) {
   const backgroundColor = getColorHex(activity.color)
@@ -30,8 +32,9 @@ export default function ActivityBadge({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      className={`inline-flex items-center gap-2 px-3 py-1.5 ${borderRadiusClass} shadow-sm transition-all duration-300 ease-in-out border-2 border-black ${
-        draggable || onClick ? 'cursor-pointer' : 'cursor-default'
+      onDoubleClick={onDoubleClick}
+      className={`inline-flex h-8 items-center gap-2 px-3 py-1.5 ${borderRadiusClass} shadow-sm transition-all duration-300 ease-in-out border border-black ${
+        draggable || onClick || onDoubleClick ? 'cursor-pointer' : 'cursor-default'
       }`}
       style={{
         backgroundColor,

@@ -63,7 +63,7 @@ export default function ActivityBlock({
     padding: '4px 8px',
     fontSize: '12px',
     opacity: isScheduled ? 0.80 : 1,
-    borderWidth: isSelected ? '2.5px' : '1.5px',
+    borderWidth: isSelected ? '2px' : '1px',
     borderStyle: 'solid',
     borderColor: 'black',
     zIndex: isSelected ? 15 : isScheduled ? 5 : 10,

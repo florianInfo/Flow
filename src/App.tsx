@@ -34,7 +34,9 @@ function App() {
     setBorderRadiusClass(newBorderRadius)
   }, [settings.design?.borderRadius])
   
-  const [viewMode, setViewMode] = useState<ViewMode>('activities')
+  const [viewMode, setViewMode] = useState<ViewMode>('planner')
+  const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false)
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const [user, setUser] = useState<User>({
     id: 1,
     activities: [],
@@ -683,7 +685,7 @@ function App() {
 
   return (
     <div className="h-screen select-none flex flex-col overflow-hidden" style={{ backgroundColor: '#ece3d0' }}>
-      <header className="w-full px-4 py-1 flex-shrink-0" style={{ backgroundColor: '#ece3d0' }}>
+      <header className="w-full px-4 py-1 flex-shrink-0 relative" style={{ backgroundColor: '#ece3d0' }}>
         <div className="flex items-center justify-between">
           <img 
             src="/logo.png" 
@@ -695,73 +697,59 @@ function App() {
             }}
           />
           
-          {/* Navigation entre les vues */}
+          {/* Navigation */}
           <nav className="flex gap-2 items-center">
-            <button
-              onClick={() => setViewMode('activities')}
-              className={`px-4 py-2 ${borderRadiusClass} transition-colors border-2 ${
-                viewMode === 'activities'
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-black border-black hover:bg-gray-100'
-              }`}
-            >
-              Activités
-            </button>
-            <button
-              onClick={() => setViewMode('planner')}
-              className={`px-4 py-2 ${borderRadiusClass} transition-colors border-2 ${
-                viewMode === 'planner'
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-black border-black hover:bg-gray-100'
-              }`}
-            >
-              Planner
-            </button>
-            <button
-              onClick={() => setViewMode('admin')}
-              className={`px-4 py-2 ${borderRadiusClass} transition-colors border-2 ${
-                viewMode === 'admin'
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-black border-black hover:bg-gray-100'
-              }`}
-            >
-              Admin
-            </button>
+            {/* Icône profil avec menu déroulant */}
+            <div className="relative">
+              <button
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                className={`p-2 ${borderRadiusClass} h-12 transition-colors border border-black bg-white text-black hover:bg-gray-100`}
+                aria-label="Menu profil"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </button>
+
+              {/* Menu déroulant */}
+              {isProfileMenuOpen && (
+                <>
+                  {/* Overlay pour fermer le menu en cliquant à l'extérieur */}
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                  />
+                  {/* Menu */}
+                  <div
+                    className={`absolute right-0 mt-2 w-48 ${borderRadiusClass} border border-black bg-white shadow-lg z-20`}
+                  >
+                    <button
+                      onClick={() => {
+                        setViewMode('admin')
+                        setIsProfileMenuOpen(false)
+                      }}
+                      className={`w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors ${
+                        viewMode === 'admin' ? 'bg-gray-100 font-semibold' : ''
+                      } ${borderRadiusClass}`}
+                    >
+                      Admin
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </nav>
         </div>
       </header>
 
-      {viewMode === 'activities' ? (
-        <main className="flex flex-col min-h-[calc(100vh-200px)] select-none flex-1">
-          {/* Panel de recherche d'activités */}
-          <div className="m-4">
-            <div className={`${borderRadiusClass} border-2 border-black bg-white shadow-lg overflow-hidden`}>
-              <SearchActivitiesPanel
-                activities={user.activities}
-                onDragStart={(e, activity) => {
-                  e.dataTransfer.effectAllowed = 'move'
-                  e.dataTransfer.setData('activity', JSON.stringify(activity))
-                  setDraggedActivity(activity)
-                }}
-                onDragEnd={() => {
-                  setDraggedActivity(null)
-                }}
-                onActivityClick={handleActivityClick}
-                onDelete={handleDelete} // Autoriser la suppression depuis la vue activities
-                showDragHint={false}
-                maxHeight="80vh"
-              />
-            </div>
-          </div>
-          
-          <button
-            onClick={handleCreateActivity}
-            className={`fixed top-[75%] left-1/2 transform -translate-x-1/2 bg-white text-black border-2 border-black px-6 py-3 ${borderRadiusClass} shadow-lg hover:bg-black hover:text-white transition-colors cursor-pointer`}
-          >
-            + Créer une activité
-          </button>
-        </main>
-      ) : viewMode === 'admin' ? (
+      {viewMode === 'admin' ? (
         <Admin 
           onResetUser={handleResetUser}
           onSaveUser={handleSaveUser}
@@ -771,29 +759,10 @@ function App() {
           onDeleteSave={handleDeleteSave}
         />
       ) : (
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          <div className="flex-shrink-0 m-4">
-            <div className={`h-full ${borderRadiusClass} border-2 border-black bg-white shadow-lg overflow-hidden flex flex-col`}>
-              <SearchActivitiesPanel
-                activities={user.activities}
-                onDragStart={(e, activity) => {
-                  e.dataTransfer.effectAllowed = 'move'
-                  e.dataTransfer.setData('activity', JSON.stringify(activity))
-                  setDraggedActivity(activity)
-                }}
-                onDragEnd={() => {
-                  setDraggedActivity(null)
-                }}
-                onActivityClick={handleActivityClick}
-                disabled={plannerMode === 'calendrier'}
-                maxHeight="100%"
-              />
-            </div>
-          </div>
-          
-          {/* Planner - 60% de l'espace */}
-          <div className="flex-1 min-h-0 overflow-hidden m-4">
-            <div className={`h-full ${borderRadiusClass} border-2 border-black bg-white shadow-lg overflow-hidden`}>
+        <div className="flex-1 min-h-0 overflow-hidden flex relative">
+          {/* Planner - prend toute la page */}
+          <div className={`flex-1 min-h-0 overflow-hidden transition-all duration-300 ${isSearchPanelOpen ? 'mr-80' : 'mr-12'}`}>
+            <div className={`h-full m-4 ${borderRadiusClass} border border-black bg-white shadow-lg overflow-hidden`}>
               <Planner
                 activities={user.activities}
                 scheduledActivities={user.templates.flatMap(t => t.scheduledActivities)}
@@ -830,8 +799,36 @@ function App() {
               />
             </div>
           </div>
-          {/* Espace entre les deux - 5% */}
-          <div className="flex-shrink-0" style={{ flex: '0 0 2.5%' }}></div>
+
+          {/* Panneau latéral de recherche - toujours visible, bandeau étroit quand fermé */}
+          <div 
+            className={`fixed ${borderRadiusClass} top-24 right-0 bottom-0 bg-white border border-black shadow-lg transition-all duration-300 z-30 ${
+              isSearchPanelOpen ? 'w-80' : 'w-12'
+            }`}
+          >
+            <div className={`h-full ${borderRadiusClass} overflow-hidden flex flex-col`}>
+              <SearchActivitiesPanel
+                activities={user.activities}
+                onDragStart={(e, activity) => {
+                  e.dataTransfer.effectAllowed = 'move'
+                  e.dataTransfer.setData('activity', JSON.stringify(activity))
+                  setDraggedActivity(activity)
+                }}
+                onDragEnd={() => {
+                  setDraggedActivity(null)
+                }}
+                onActivityClick={handleActivityClick}
+                onActivityDoubleClick={handleActivityClick}
+                onDelete={handleDelete}
+                onCreateActivity={handleCreateActivity}
+                disabled={plannerMode === 'calendrier'}
+                borderRadiusClass={borderRadiusClass}
+                isOpen={isSearchPanelOpen}
+                onClose={() => setIsSearchPanelOpen(false)}
+                onOpen={() => setIsSearchPanelOpen(true)}
+              />
+            </div>
+          </div>
         </div>
       )}
 
