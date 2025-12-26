@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Activity } from './models/Activity'
+import { Activity, Color } from './models/Activity'
 import { ScheduledActivity, PlannedActivity, User } from './models/Planning'
 import ActivityModal from './components/ActivityModal'
 import Planner from './components/Planner'
@@ -133,11 +133,110 @@ function App() {
 
   const handleResetUser = () => {
     if (window.confirm('Êtes-vous sûr de vouloir réinitialiser complètement le user ? Toutes les activités, templates et calendriers seront supprimés.')) {
+      // Créer l'activité "Reflexion"
+      const now = new Date()
+      const currentHour = now.getHours()
+      const currentMinute = now.getMinutes()
+      
+      // Trouver le créneau le plus proche selon slotMinutes
+      const slotMinutes = settings.planner.slotMinutes
+      const startHour = settings.planner.startHour
+      const endHour = settings.planner.endHour
+      
+      // Arrondir les minutes au créneau le plus proche
+      const roundedMinute = Math.round(currentMinute / slotMinutes) * slotMinutes
+      let nearestHour = currentHour
+      let nearestMinute = roundedMinute
+      
+      // Gérer le débordement des minutes (ex: 14:50 avec slotMinutes=15 -> 15:00)
+      if (nearestMinute >= 60) {
+        nearestHour += 1
+        nearestMinute = 0
+      }
+      
+      // S'assurer que le créneau est dans les limites du planner
+      if (nearestHour < startHour) {
+        nearestHour = startHour
+        nearestMinute = 0
+      } else if (nearestHour > endHour) {
+        nearestHour = endHour
+        nearestMinute = 0
+      }
+      
+      // Calculer l'heure de fin (30 minutes plus tard)
+      // Comme 30 minutes est toujours un multiple de slotMinutes (5, 10, 15, 30, 60),
+      // l'heure de fin sera automatiquement sur un créneau valide
+      const endMinutes = nearestMinute + 30
+      let endHourCalc = nearestHour
+      let endMinuteCalc = endMinutes
+      
+      // Gérer le débordement des minutes
+      if (endMinuteCalc >= 60) {
+        endHourCalc += 1
+        endMinuteCalc -= 60
+      }
+      
+      // S'assurer que l'heure de fin ne dépasse pas endHour
+      if (endHourCalc > endHour) {
+        // Si on dépasse, ajuster pour que l'activité se termine à endHour:00
+        endHourCalc = endHour
+        endMinuteCalc = 0
+        // Ajuster l'heure de début pour garder 30 minutes de durée
+        const totalStartMinutes = endHourCalc * 60 - 30
+        nearestHour = Math.floor(totalStartMinutes / 60)
+        nearestMinute = totalStartMinutes % 60
+        // Réarrondir nearestMinute au créneau le plus proche
+        nearestMinute = Math.floor(nearestMinute / slotMinutes) * slotMinutes
+        // S'assurer que nearestHour est dans les limites
+        if (nearestHour < startHour) {
+          nearestHour = startHour
+          nearestMinute = 0
+        }
+      }
+      
+      const endTime = `${String(endHourCalc).padStart(2, '0')}:${String(endMinuteCalc).padStart(2, '0')}`
+      // Recalculer startTime avec les valeurs finales (peut avoir été ajusté)
+      const startTime = `${String(nearestHour).padStart(2, '0')}:${String(nearestMinute).padStart(2, '0')}`
+      
+      // Créer l'activité Reflexion
+      const reflexionActivity: Activity = {
+        id: 1,
+        title: 'Reflexion',
+        description: '',
+        color: Color.BURNT_ORANGE,
+        textColor: 'black',
+        recurringActivities: [],
+      }
+      
+      // Créer la ScheduledActivity hebdomadaire
+      const reflexionScheduled: ScheduledActivity = {
+        id: 1,
+        activityId: 1,
+        startTime: startTime,
+        endTime: endTime,
+        dayOfWeek: now.getDay(), // Jour actuel (0 = dimanche, 6 = samedi)
+        periodicity: {
+          frequency: 1,
+          unit: 'weekly',
+        },
+      }
+      
+      // Générer les PlannedActivities pour les 90 prochains jours
+      const startDate = new Date()
+      const endDatePlanned = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+      const generatedPlanned = generatePlannedActivities([reflexionScheduled], startDate, endDatePlanned)
+      
+      // Assigner des IDs aux PlannedActivities
+      const plannedWithIds = generatedPlanned.map((planned, index) => ({
+        ...planned,
+        id: index + 1,
+      }))
+      
       const newUser: User = {
         id: 1,
-        activities: [],
-        templates: [{ id: 1, userId: 1, scheduledActivities: [] }],
-        calendars: [{ id: 1, name: 'Calendrier principal', plannedActivities: [] }],
+        activities: [reflexionActivity],
+        templates: [{ id: 1, userId: 1, scheduledActivities: [reflexionScheduled] }],
+        calendars: [{ id: 1, name: 'Calendrier principal', plannedActivities: plannedWithIds }],
       }
       setUser(newUser)
       // Supprimer aussi le localStorage pour forcer le rechargement

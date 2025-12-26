@@ -643,6 +643,41 @@ export default function Planner({
     }
   }, [scrollCursor])
 
+  // Scroll automatique à l'heure actuelle au chargement
+  useEffect(() => {
+    if (!plannerRef.current) return
+
+    const now = new Date()
+    const currentHour = now.getHours()
+    const currentMinute = now.getMinutes()
+    
+    // Calculer la position en pixels de l'heure actuelle
+    // Position = (heures depuis START_HOUR + minutes/60) * SLOT_HEIGHT
+    const hoursFromStart = currentHour - START_HOUR
+    const minutesFraction = currentMinute / 60
+    const totalHoursFromStart = hoursFromStart + minutesFraction
+    
+    // Position en pixels (sans tenir compte du header)
+    const positionInPixels = totalHoursFromStart * SLOT_HEIGHT
+    
+    // Hauteur du header sticky (48px selon le code)
+    const HEADER_HEIGHT = 48
+    
+    // Faire défiler pour centrer l'heure actuelle dans la vue
+    // On soustrait la moitié de la hauteur visible pour centrer
+    if (plannerRef.current) {
+      const visibleHeight = plannerRef.current.clientHeight
+      const targetScroll = Math.max(0, positionInPixels - (visibleHeight / 2) + HEADER_HEIGHT)
+      
+      // Utiliser setTimeout pour s'assurer que le DOM est rendu
+      setTimeout(() => {
+        if (plannerRef.current) {
+          plannerRef.current.scrollTop = targetScroll
+        }
+      }, 100)
+    }
+  }, []) // Seulement au montage initial
+
   return (
     <div className="flex flex-col h-full overflow-hidden pb-6">
       {/* Planner */}
