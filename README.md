@@ -1,125 +1,133 @@
-# Flow Planner 🌿
+# Flow - Application React TypeScript avec Tailwind CSS
 
-Une application de planning immersive et ludique avec drag & drop, conçue pour planifier votre semaine de manière zen et efficace.
+Projet React TypeScript moderne avec Tailwind CSS et une structure de répertoires organisée.
 
-## ✨ Fonctionnalités
+## 🚀 Structure du Projet
 
-### 🎯 Planning Immersif
-- **Interface immersive** : Prend tout l'écran pour une expérience de jeu
-- **Design zen** : Charte graphique bois/forêt avec palette de couleurs naturelles
-- **Animations fluides** : Transitions et animations ludiques avec Framer Motion
+```
+src/
+├── components/          # Composants React réutilisables
+│   ├── ActivityCard.tsx
+│   └── ActivityForm.tsx
+├── models/             # Modèles de données TypeScript
+│   └── Activity.ts     # Classe Activity complète avec toutes les fonctionnalités TypeScript
+├── hooks/              # Hooks React personnalisés (à créer)
+├── utils/              # Fonctions utilitaires (à créer)
+├── services/           # Services API (à créer)
+├── types/              # Types TypeScript globaux (à créer)
+└── styles/             # Styles globaux
+    └── index.css       # Styles Tailwind CSS
+```
 
-### 🎨 Création d'Activités
-- **Création intuitive** : Bouton "Nouvelle activité" avec popup de création
-- **Palette de couleurs** : 5 couleurs thématiques (Sauge, Mousse, Or, Cuivre, Sarcelle)
-- **Catégorisation** : Général, Travail, Sport, Loisirs, Personnel
-- **Templates** : Activités disponibles en haut pour drag & drop
-
-### 🖱️ Drag & Drop Avancé
-- **Glisser-déposer** : Déplacez les activités depuis les templates vers les créneaux
-- **Détection de conflits** : Empêche la superposition d'activités
-- **Feedback visuel** : Animations et notifications en temps réel
-
-### ⏰ Gestion du Temps
-- **Redimensionnement** : Ajustez la durée des activités (15min min, 24h max)
-- **Créneaux flexibles** : Système de créneaux de 15 minutes
-- **Indicateurs visuels** : Affichage de la durée au survol
-
-### 📊 Statistiques en Temps Réel
-- **Classement F1** : Top 5 des activités par temps passé
-- **Mise à jour live** : Changements de position avec animations
-- **Métriques détaillées** : Temps total, moyenne, nombre de sessions
-- **Notifications** : Alertes "+30min" lors des changements
-
-### 💾 Sauvegarde Locale
-- **Persistance** : Données sauvegardées automatiquement dans le navigateur
-- **Format JSON** : Structure de données claire et extensible
-- **Chargement automatique** : Restauration des données au démarrage
-
-### 🖨️ Impression
-- **Version imprimable** : Optimisée pour l'impression
-- **Mise en page adaptée** : Styles spéciaux pour l'impression
-- **Bouton d'impression** : Accès direct depuis l'interface
-
-## 🚀 Installation
+## 📦 Installation
 
 ```bash
-# Cloner le projet
-git clone <repository-url>
-cd flow-planner
-
-# Installer les dépendances
 npm install
-
-# Lancer l'application
-npm start
 ```
 
-## 🎨 Palette de Couleurs
-
-| Couleur | Hex | Usage |
-|---------|-----|-------|
-| 🌿 Sauge | `#8BA888` | Nature / Calme / Repos |
-| 🌲 Mousse | `#7B8654` | Concentration / Travail |
-| ☀️ Or | `#DCA44C` | Énergie / Sport / Motivation |
-| 🔥 Cuivre | `#C1683C` | Passion / Créativité |
-| 💧 Sarcelle | `#4B7B73` | Méditation / Détente / Soirée |
-
-## 🏗️ Architecture
-
-### Modèles de Données
-- **Planner** : Conteneur principal avec activités, créneaux et programmations
-- **Activity** : Modèle d'activité avec titre, couleur et catégorie
-- **Creneaux** : Créneau horaire avec jour, heure de début et fin
-- **ScheduledActivity** : Liaison entre activité et créneau
-
-### Composants Principaux
-- **Header** : Logo, titre et actions (impression, paramètres)
-- **ActivityCreator** : Création et gestion des activités
-- **PlannerGrid** : Grille principale avec drag & drop
-- **StatisticsPanel** : Classement et statistiques en temps réel
-- **NotificationSystem** : Système de notifications
-
-### Technologies
-- **React 18** : Framework principal
-- **Tailwind CSS** : Styling et design system
-- **Framer Motion** : Animations et transitions
-- **@dnd-kit** : Système de drag & drop
-- **Lucide React** : Icônes modernes
-
-## 📱 Utilisation
-
-1. **Créer une activité** : Cliquez sur "Nouvelle activité" et remplissez le formulaire
-2. **Programmer** : Glissez l'activité depuis le haut vers un créneau horaire
-3. **Ajuster la durée** : Survolez l'activité et redimensionnez avec les poignées
-4. **Suivre les stats** : Consultez le classement en bas de page
-5. **Imprimer** : Utilisez le bouton d'impression pour sauvegarder votre planning
-
-## 🎮 Expérience Utilisateur
-
-L'application est conçue comme un jeu avec :
-- **Animations fluides** : Transitions douces et naturelles
-- **Feedback visuel** : Réactions immédiates aux actions
-- **Interface immersive** : Plein écran pour une concentration maximale
-- **Design zen** : Couleurs apaisantes et typographie claire
-
-## 🔧 Développement
+## 🛠️ Développement
 
 ```bash
-# Mode développement
-npm start
-
-# Build de production
-npm run build
-
-# Tests
-npm test
+npm run dev
 ```
 
-## 📄 Licence
+## 🏗️ Build
 
-MIT License - Libre d'utilisation et de modification.
+```bash
+npm run build
+```
 
----
+## 📚 Classe Activity
 
-*Flow Planner* - Planifiez votre semaine en toute sérénité 🌿
+La classe `Activity` dans `src/models/Activity.ts` est un exemple complet et exhaustif de toutes les fonctionnalités TypeScript, organisées du plus utilisé au moins utilisé.
+
+Consultez `src/examples/activity-usage.example.ts` pour des exemples d'utilisation détaillés.
+
+### Fonctionnalités incluses :
+
+1. **Interfaces et Types** - Définitions de contrat
+2. **Propriétés publiques** - Accès direct
+3. **Propriétés privées** - Encapsulation
+4. **Propriétés protégées** - Héritage
+5. **Propriétés statiques** - Données partagées
+6. **Propriétés readonly** - Immutabilité
+7. **Constructeurs** - Initialisation
+8. **Getters et Setters** - Accès contrôlé
+9. **Méthodes publiques** - API principale
+10. **Méthodes asynchrones** - Opérations async
+11. **Méthodes génériques** - Flexibilité
+12. **Méthodes statiques** - Opérations de classe
+13. **Méthodes privées** - Implémentation interne
+14. **Méthodes protégées** - Héritage
+15. **Méthodes avec overload** - Polymorphisme
+16. **Méthodes avec paramètres rest** - Flexibilité
+17. **Méthodes avec paramètres par défaut** - Commodité
+18. **Symboles et itérateurs** - Itérabilité
+19. **Méthodes de lifecycle** - Cleanup
+20. **Assertions de type** - Type safety
+21. **Décorateurs** - Métaprogrammation
+22. **Conditional types** - Types avancés
+23. **Mapped types** - Transformation de types
+24. **Utility types** - Types utilitaires
+25. **Template literal types** - Types de chaînes
+
+## 🎨 Technologies
+
+- **React 18** - Bibliothèque UI
+- **TypeScript** - Typage statique
+- **Tailwind CSS** - Framework CSS utilitaire
+- **Vite** - Build tool moderne
+
+## 📖 Exemples d'utilisation
+
+### Création d'une activité
+
+```typescript
+import { Activity } from './models/Activity';
+
+// Méthode recommandée
+const activity = Activity.create(
+  'Mon titre',
+  'Ma description',
+  {
+    status: 'active',
+    priority: 'high',
+    category: 'Travail'
+  }
+);
+```
+
+### Utilisation des méthodes
+
+```typescript
+// Mise à jour
+activity.updateStatus('completed');
+activity.updatePriority('urgent');
+activity.addTag('important');
+
+// Statistiques
+activity.incrementViews();
+activity.like();
+activity.share();
+
+// Méthodes asynchrones
+await activity.save();
+const validation = await activity.validate();
+```
+
+### Méthodes statiques
+
+```typescript
+// Recherche
+const activity = Activity.getById('act-001');
+const activeActivities = Activity.findByStatus('active');
+
+// Tri et groupement
+const sorted = Activity.sortByPriority(activities);
+const grouped = Activity.groupByStatus(activities);
+```
+
+## 📝 License
+
+MIT
+
